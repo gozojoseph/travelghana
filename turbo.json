@@ -9,10 +9,24 @@
       "cache": false,
       "persistent": true
     },
+    "db:generate": {
+      "dependsOn": [],
+      "outputs": ["src/generated/**"],
+      "inputs": ["prisma/schema.prisma"]
+    },
     "typecheck": {
       "dependsOn": ["^db:generate"]
     },
-    "lint": {},
-    "test": {}
+    "lint": {
+      "dependsOn": ["^typecheck"]
+    },
+    "test": {
+      "dependsOn": ["^db:generate"],
+      "outputs": ["coverage/**"]
+    },
+    "test:int": {
+      "dependsOn": ["^db:generate"],
+      "cache": false
+    }
   }
 }
