@@ -1,4 +1,4 @@
-import { randomBytes, scrypt, timingSafeEqual } from "crypto";
+import { createHash, randomBytes, scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
 /**
@@ -37,5 +37,3 @@ export function hashToken(token: string): string {
   // Tokens are high-entropy; a fast SHA-256 hash is sufficient and indexable.
   return createHash("sha256").update(token).digest("hex");
 }
-
-import { createHash } from "crypto";

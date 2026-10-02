@@ -75,6 +75,10 @@ export class AuthController {
     return { user };
   }
 
+  // Public by necessity: the token arrives in a link the user opens from their
+  // mailbox, typically on a different device with no TravelGhana session. The
+  // 256-bit single-use token (hashed at rest, 1h expiry) is the authorisation.
+  @Public()
   @Post("verify-email")
   @HttpCode(HttpStatus.OK)
   async verifyEmail(

@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
 
+import { swcDecorators } from "./vitest.shared";
+
 export default defineConfig({
+  ...swcDecorators,
   test: {
     include: ["test/**/*.int.spec.ts"],
     environment: "node",
