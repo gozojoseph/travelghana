@@ -18,8 +18,6 @@ import { AuthService, SESSION_COOKIE } from "./auth.service";
 import { Public } from "../../common/decorators/public.decorator";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 
-const SESSION_COOKIE_MAX_AGE_S = 30 * 24 * 60 * 60; // mirrors session TTL
-
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

@@ -12,17 +12,15 @@ function VerifyEmailInner() {
   const token = params.get("token") ?? "";
   const attempted = useRef(false);
 
-  const [state, setState] = useState<"pending" | "success" | "error">("pending");
-  const [message, setMessage] = useState("");
+  const [state, setState] = useState<"pending" | "success" | "error">(
+    token ? "pending" : "error",
+  );
+  const [message, setMessage] = useState(token ? "" : "This link is missing its token.");
 
   useEffect(() => {
+    if (!token) return;
     if (attempted.current) return;
     attempted.current = true;
-    if (!token) {
-      setState("error");
-      setMessage("This link is missing its token.");
-      return;
-    }
     api
       .verifyEmail(token)
       .then(() => setState("success"))

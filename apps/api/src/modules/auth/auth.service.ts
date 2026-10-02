@@ -1,7 +1,6 @@
 import { Inject, Injectable, OnModuleInit } from "@nestjs/common";
 import type { Role, Session, User } from "@travelghana/database";
 import type { AuthResponse, SessionUser } from "@travelghana/types";
-import { createHash } from "crypto";
 
 import { ApiError } from "../../common/errors/api-error";
 import { toSessionUser } from "../../common/mappers/session-user.mapper";

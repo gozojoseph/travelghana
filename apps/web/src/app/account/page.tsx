@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { BellRing, BadgeCheck, MailWarning } from "lucide-react";
 
-import { api, ApiClientError } from "@/lib/api";
+import { api } from "@/lib/api";
 import type { SessionUser } from "@travelghana/types";
 
 /**

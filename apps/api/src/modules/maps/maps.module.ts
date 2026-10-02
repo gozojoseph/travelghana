@@ -1,7 +1,6 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common";
 
 import { MapboxAdapter } from "./mapbox.adapter";
-import { MapsAdapter } from "./maps-adapter.interface";
 import { NullMapAdapter } from "./null-maps.adapter";
 
 export const MAPS = Symbol("MAPS");

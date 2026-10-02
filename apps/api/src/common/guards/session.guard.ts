@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
 import type { Request } from "express";
 
 import { ApiError } from "../errors/api-error";
-import { ROLES_KEY, Roles } from "../decorators/roles.decorator";
+import { ROLES_KEY } from "../decorators/roles.decorator";
 import { AuthService } from "../../modules/auth/auth.service";
 import { Reflector } from "@nestjs/core";
 import { Role } from "@travelghana/database";
