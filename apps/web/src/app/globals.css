@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Semantic design tokens (§53) — values mirror packages/ui/src/tokens.ts.
+ * Components must consume these variables, never hard-coded hex values.
+ */
+:root {
+  --tg-primary: #006b3f; /* Deep Ghana Green — dominant */
+  --tg-secondary: #f2c94c; /* Warm Gold — accent */
+  --tg-accent: #ce1126; /* Ghana Red — emphasis only, sparingly */
+  --tg-background: #fffdf7; /* Warm Ivory */
+  --tg-text-primary: #17211b;
+  --tg-text-secondary: #65736b;
+  --tg-card: #ffffff;
+  --tg-muted: #f4f1e8;
+  --tg-border: #e7e2d4;
+
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-display: "DM Serif Display", Georgia, serif;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: var(--tg-background);
+    color: var(--tg-text-primary);
+  }
+
+  /* Visible focus states everywhere (§43 accessibility) */
+  :focus-visible {
+    outline: 2px solid var(--tg-primary);
+    outline-offset: 2px;
+  }
+}

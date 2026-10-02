@@ -1,0 +1,27 @@
+{
+  "name": "travelghana",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "db:start": "docker compose -f infrastructure/docker-compose.yml up -d 2>/dev/null || node infrastructure/local-db.mjs start",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @travelghana/database db:generate",
+    "db:push": "pnpm --filter @travelghana/database db:push",
+    "db:migrate": "pnpm --filter @travelghana/database db:migrate",
+    "db:seed": "pnpm --filter @travelghana/database db:seed"
+  },
+  "devDependencies": {
+    "@embedded-postgres/windows-x64": "18.4.0-beta.17",
+    "embedded-postgres": "18.4.0-beta.17",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3"
+  }
+}

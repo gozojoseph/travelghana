@@ -1,0 +1,1042 @@
+// TravelGhana — draft schema v0.2 (implements docs/ERD.md)
+// Money: integer minor units (pesewas) + currencyCode everywhere. No floats. (D8)
+// D1 merchant-of-record; D3 multi-role; D5 operator-first; §11 privacy-scoped needs.
+
+generator client {
+  provider = "prisma-client-js"
+  // Project-relative output so the client is resolvable across pnpm workspaces
+  // — import PrismaClient and types from @travelghana/database, never from
+  // @prisma/client directly.
+  output = "../src/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Identity ────────────────────────────────────────────────────────────────
+
+enum Role {
+  TRAVELER
+  DRIVER
+  TOUR_OPERATOR
+  HOTEL_MANAGER
+  TRANSPORT_COMPANY
+  EXPERIENCE_PROVIDER
+  ADMIN
+}
+
+enum MembershipStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  passwordHash    String?
+  emailVerifiedAt DateTime?
+  phone           String?
+  name            String?
+  avatarUrl       String?
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  memberships   RoleMembership[]
+  sessions      Session[]
+  provider      Provider?   // 1:1 (D3: a user may also operate as a provider)
+  driverProfile Driver?     // 1:1
+  trips         Trip[]      @relation("TripOwner")
+  bookings      Booking[]
+  reviews       Review[]
+  favorites     Favorite[]
+  messages      Message[]
+  participants  ConversationParticipant[]
+  notifications Notification[]
+  documents     Document[]  @relation("DocumentOwner")
+  auditLogs     AuditLog[]  @relation("AuditActor")
+  enquiries     Enquiry[]
+  emailTokens   EmailVerificationToken[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+model RoleMembership {
+  id        String           @id @default(cuid())
+  userId    String
+  role      Role
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  userAgent String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Catalog (discovery) ─────────────────────────────────────────────────────
+
+enum DestinationCategory {
+  BEACH
+  HISTORICAL
+  CULTURAL
+  NATURE
+  CITY
+  FOOD
+  ADVENTURE
+}
+
+model Region {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  description String?
+  mapPolygon  Json?
+  sort        Int     @default(0)
+
+  cities City[]
+}
+
+model City {
+  id          String  @id @default(cuid())
+  regionId    String
+  slug        String
+  name        String
+  description String?
+  lat         Float
+  lng         Float
+
+  region            Region             @relation(fields: [regionId], references: [id])
+  destinations      Destination[]
+  attractions       Attraction[]
+  providers         Provider[]
+  tours             Tour[]
+  experiences       Experience[]
+  hotels            Hotel[]
+  transportServices TransportService[]
+  events            Event[]
+
+  @@unique([regionId, slug])
+}
+
+model Destination {
+  id           String              @id @default(cuid())
+  cityId       String
+  slug         String              @unique // globally unique — powers SEO routes /destinations/[slug]
+  name         String
+  category     DestinationCategory
+  summary      String?
+  description  String?
+  lat          Float
+  lng          Float
+  heroImageUrl String?
+  featured     Boolean             @default(false)
+  published    Boolean             @default(false)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  city           City            @relation(fields: [cityId], references: [id])
+  attractions    Attraction[]
+  itineraryItems ItineraryItem[]
+
+  @@index([category, published])
+}
+
+model Attraction {
+  id            String  @id @default(cuid())
+  destinationId String?
+  cityId        String?
+  slug          String  @unique
+  name          String
+  description   String?
+  lat           Float
+  lng           Float
+  category      String?
+
+  destination    Destination?    @relation(fields: [destinationId], references: [id])
+  city           City?           @relation(fields: [cityId], references: [id])
+  itineraryItems ItineraryItem[]
+
+  @@index([cityId])
+}
+
+// ─── Marketplace ─────────────────────────────────────────────────────────────
+
+enum ProviderType {
+  TOUR_OPERATOR
+  HOTEL
+  EXPERIENCE_PROVIDER
+  TRANSPORT_COMPANY
+  RESTAURANT
+  EVENT_ORGANIZER
+  DRIVER_PARTNER
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+model Provider {
+  id                 String             @id @default(cuid())
+  userId             String?            @unique
+  type               ProviderType
+  name               String
+  slug               String             @unique
+  description        String?
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  contactEmail       String?
+  contactPhone       String?
+  logoUrl            String?
+  cityId             String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user              User?              @relation(fields: [userId], references: [id])
+  city              City?              @relation(fields: [cityId], references: [id])
+  tours             Tour[]
+  experiences       Experience[]
+  hotels            Hotel[]
+  transportServices TransportService[]
+  vehicles          Vehicle[]
+  drivers           Driver[]
+  events            Event[]
+  bookings          Booking[]
+  reviews           Review[]
+  payouts           ProviderPayout[]
+  documents         Document[]
+
+  @@index([type, verificationStatus])
+}
+
+model Tour {
+  id             String   @id @default(cuid())
+  providerId     String
+  slug           String
+  title          String
+  summary        String?
+  description    String?
+  durationHours  Int?
+  days           Int?
+  groupMin       Int      @default(1)
+  groupMax       Int      @default(10)
+  basePriceMinor Int
+  currencyCode   String   @default("GHS")
+  cityId         String?
+  meetingPoint   String?
+  category       String?
+  published      Boolean  @default(false)
+  heroImageUrl   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  provider Provider          @relation(fields: [providerId], references: [id])
+  city     City?             @relation(fields: [cityId], references: [id])
+  slots    AvailabilitySlot[]
+  bookings Booking[]
+
+  @@unique([providerId, slug])
+  @@index([cityId, published])
+}
+
+model Experience {
+  id              String   @id @default(cuid())
+  providerId      String
+  slug            String
+  title           String
+  description     String?
+  durationMinutes Int?
+  priceMinor      Int
+  currencyCode    String   @default("GHS")
+  cityId          String?
+  category        String?
+  published       Boolean  @default(false)
+  heroImageUrl    String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  provider  Provider          @relation(fields: [providerId], references: [id])
+  city      City?             @relation(fields: [cityId], references: [id])
+  slots     AvailabilitySlot[]
+  bookings  Booking[]
+
+  @@unique([providerId, slug])
+  @@index([cityId, published])
+}
+
+model Hotel {
+  id           String  @id @default(cuid())
+  providerId   String
+  slug         String
+  name         String
+  description  String?
+  starRating   Int?
+  cityId       String?
+  address      String?
+  lat          Float?
+  lng          Float?
+  checkInTime  String?
+  checkOutTime String?
+  published    Boolean @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  provider Provider  @relation(fields: [providerId], references: [id])
+  city     City?     @relation(fields: [cityId], references: [id])
+  rooms    Room[]
+
+  @@unique([providerId, slug])
+  @@index([cityId, published])
+}
+
+model Room {
+  id                 String  @id @default(cuid())
+  hotelId            String
+  name               String
+  roomType           String?
+  capacity           Int
+  beds               Int     @default(1)
+  pricePerNightMinor Int
+  currencyCode       String  @default("GHS")
+  totalRooms         Int     @default(1)
+  description        String?
+  amenities          String[]
+
+  hotel    Hotel       @relation(fields: [hotelId], references: [id])
+  nights   RoomNight[]
+  bookings Booking[]
+
+  @@index([hotelId])
+}
+
+model Event {
+  id                  String   @id @default(cuid())
+  organizerProviderId String?
+  slug                String
+  name                String
+  description         String?
+  venueCityId         String?
+  venueName           String?
+  startsAt            DateTime
+  endsAt              DateTime
+  published           Boolean  @default(false)
+  heroImageUrl        String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  organizer Provider? @relation(fields: [organizerProviderId], references: [id])
+  venueCity City?     @relation(fields: [venueCityId], references: [id])
+
+  @@index([venueCityId, startsAt])
+  @@index([organizerProviderId])
+}
+
+// ─── Transport (Vehicle + Driver + Service) ──────────────────────────────────
+
+enum TransportServiceType {
+  AIRPORT_TRANSFER
+  FULL_DAY_DRIVER
+  MULTI_DAY_DRIVER
+  POINT_TO_POINT
+  GROUP_TRANSPORT
+  EVENT_TRANSPORT
+  CORPORATE_TRANSPORT
+}
+
+enum PricingModel {
+  FLAT
+  PER_DAY
+  PER_KM
+}
+
+enum VehicleCategory {
+  SEDAN
+  SUV
+  MINIVAN
+  VAN
+  HIACE
+  BUS
+  LUXURY
+  OTHER
+}
+
+model Driver {
+  id                 String             @id @default(cuid())
+  userId             String?            @unique
+  providerId         String?
+  displayName        String
+  photoUrl           String?
+  licenseNumber      String?
+  licenseVerifiedAt  DateTime?
+  yearsExperience    Int                @default(0)
+  languages          String[]
+  serviceCityIds     String[]
+  bio                String?
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  user          User?           @relation(fields: [userId], references: [id])
+  provider      Provider?       @relation(fields: [providerId], references: [id])
+  vehicles      DriverVehicle[]
+  ownedVehicles Vehicle[]       @relation("OwnerDriver")
+  bookings      Booking[]
+
+  @@index([providerId])
+}
+
+model Vehicle {
+  id                    String             @id @default(cuid())
+  providerId            String?
+  driverId              String?
+  category              VehicleCategory
+  make                  String
+  model                 String
+  year                  Int?
+  passengerCapacity     Int
+  luggageCapacity       Int?
+  hasAc                 Boolean            @default(true)
+  accessibilityFeatures String?
+  photos                String[]
+  plateNumber           String?
+  verificationStatus    VerificationStatus @default(UNVERIFIED)
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  provider    Provider?       @relation(fields: [providerId], references: [id])
+  driver      Driver?         @relation("OwnerDriver", fields: [driverId], references: [id])
+  driverLinks DriverVehicle[]
+
+  @@index([category])
+}
+
+model DriverVehicle {
+  driverId  String
+  vehicleId String
+  isPrimary Boolean @default(false)
+
+  driver  Driver  @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@id([driverId, vehicleId])
+}
+
+model TransportService {
+  id             String               @id @default(cuid())
+  providerId     String
+  serviceType    TransportServiceType
+  vehicleCategory VehicleCategory?
+  basePriceMinor Int
+  currencyCode   String               @default("GHS")
+  pricingModel   PricingModel         @default(FLAT)
+  cityId         String?
+  published      Boolean              @default(false)
+  rules          Json?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  provider Provider          @relation(fields: [providerId], references: [id])
+  city     City?             @relation(fields: [cityId], references: [id])
+  slots    AvailabilitySlot[]
+  bookings Booking[]
+
+  @@index([serviceType, cityId, published])
+}
+
+// ─── Trip ────────────────────────────────────────────────────────────────────
+
+enum TripStatus {
+  PLANNING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model Trip {
+  id           String     @id @default(cuid())
+  ownerUserId  String
+  name         String
+  startDate    DateTime?
+  endDate      DateTime?
+  status       TripStatus @default(PLANNING)
+  adults       Int        @default(1)
+  children     Int        @default(0)
+  budgetMinor  Int?
+  currencyCode String     @default("GHS")
+  notes        String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  owner         User            @relation("TripOwner", fields: [ownerUserId], references: [id])
+  travelers     TripTraveler[]
+  days          ItineraryDay[]
+  bookings      Booking[]
+  conversations Conversation[]
+  enquiries     Enquiry[]
+
+  @@index([ownerUserId, status])
+}
+
+model TripTraveler {
+  id       String  @id @default(cuid())
+  tripId   String
+  name     String?
+  ageGroup String?
+  isOwner  Boolean @default(false)
+
+  trip  Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  needs TravelerNeed[]
+
+  @@index([tripId])
+}
+
+enum NeedCategory {
+  ACCESSIBILITY
+  MOBILITY
+  DIETARY
+  ALLERGY
+  CHILDREN
+  SENIOR
+  PREGNANCY
+  MEDICATION
+  ASSISTANCE
+  OTHER
+}
+
+enum NeedVisibility {
+  NONE
+  MINIMAL
+  FULL
+}
+
+// §11: sensitive traveler needs — visibility-scoped, consent-gated, access audited.
+model TravelerNeed {
+  id                        String         @id @default(cuid())
+  tripTravelerId            String
+  category                  NeedCategory
+  details                   String?
+  consentGivenAt            DateTime?
+  providerVisibility        NeedVisibility @default(NONE)
+  detailsVisibleToProviders Boolean        @default(false)
+
+  tripTraveler TripTraveler @relation(fields: [tripTravelerId], references: [id], onDelete: Cascade)
+
+  @@index([tripTravelerId])
+}
+
+model ItineraryDay {
+  id        String    @id @default(cuid())
+  tripId    String
+  dayNumber Int
+  date      DateTime?
+  title     String?
+  notes     String?
+
+  trip  Trip            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  items ItineraryItem[]
+
+  @@unique([tripId, dayNumber])
+}
+
+enum ItineraryItemType {
+  BOOKING
+  ATTRACTION
+  RESTAURANT
+  EVENT
+  NOTE
+  TRANSPORT
+}
+
+model ItineraryItem {
+  id             String            @id @default(cuid())
+  itineraryDayId String
+  sortOrder      Int
+  startTime      DateTime?
+  endTime        DateTime?
+  title          String
+  itemType       ItineraryItemType
+  bookingId      String?
+  attractionId   String?
+  destinationId  String?
+  notes          String?
+  createdAt      DateTime          @default(now())
+
+  day         ItineraryDay @relation(fields: [itineraryDayId], references: [id], onDelete: Cascade)
+  booking     Booking?     @relation(fields: [bookingId], references: [id])
+  attraction  Attraction?  @relation(fields: [attractionId], references: [id])
+  destination Destination? @relation(fields: [destinationId], references: [id])
+
+  @@index([itineraryDayId, sortOrder])
+}
+
+// ─── Booking & availability ──────────────────────────────────────────────────
+
+enum BookableType {
+  TOUR
+  EXPERIENCE
+  TRANSPORT
+  HOTEL_ROOM
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+  EXPIRED
+}
+
+model AvailabilitySlot {
+  id                 String       @id @default(cuid())
+  serviceableType    BookableType
+  tourId             String?
+  experienceId       String?
+  transportServiceId String?
+  startsAt           DateTime
+  endsAt             DateTime
+  capacity           Int
+  bookedCount        Int          @default(0)
+  isClosed           Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+
+  tour             Tour?              @relation(fields: [tourId], references: [id])
+  experience       Experience?        @relation(fields: [experienceId], references: [id])
+  transportService TransportService?  @relation(fields: [transportServiceId], references: [id])
+  holds            AvailabilityHold[]
+  bookings         Booking[]
+
+  @@index([tourId, startsAt])
+  @@index([experienceId, startsAt])
+  @@index([transportServiceId, startsAt])
+}
+
+model RoomNight {
+  id        String   @id @default(cuid())
+  roomId    String
+  date      DateTime @db.Date
+  available Int
+
+  room  Room              @relation(fields: [roomId], references: [id])
+  holds AvailabilityHold[]
+
+  @@unique([roomId, date])
+}
+
+enum HoldStatus {
+  ACTIVE
+  CONSUMED
+  RELEASED
+  EXPIRED
+}
+
+model AvailabilityHold {
+  id                String     @id @default(cuid())
+  userId            String
+  slotId            String?
+  roomNightId       String?
+  expiresAt         DateTime
+  consumedBookingId String?  @unique
+  status            HoldStatus @default(ACTIVE)
+  createdAt         DateTime   @default(now())
+
+  slot      AvailabilitySlot? @relation(fields: [slotId], references: [id])
+  roomNight RoomNight?        @relation(fields: [roomNightId], references: [id])
+  booking   Booking?          @relation("HoldBooking")
+
+  @@index([expiresAt, status])
+}
+
+model Booking {
+  id               String        @id @default(cuid())
+  code             String        @unique // human-readable, e.g. TG-2026-000123
+  userId           String
+  tripId           String?
+  providerId       String
+  bookableType     BookableType
+  tourId           String?
+  experienceId     String?
+  transportServiceId String?
+  roomId           String?
+  slotId           String?
+  holdId           String? @unique
+  driverId         String? // requested/assigned driver for transport bookings
+  startDate        DateTime
+  endDate          DateTime?
+  paxAdults        Int           @default(1)
+  paxChildren      Int           @default(0)
+  amountMinor      Int
+  currencyCode     String        @default("GHS")
+  status           BookingStatus @default(PENDING_PAYMENT)
+  specialRequests  String?
+  cancellationPolicy Json?
+  cancelledAt      DateTime?
+  cancelReason     String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  user             User               @relation(fields: [userId], references: [id])
+  trip             Trip?              @relation(fields: [tripId], references: [id])
+  provider         Provider           @relation(fields: [providerId], references: [id])
+  tour             Tour?              @relation(fields: [tourId], references: [id])
+  experience       Experience?        @relation(fields: [experienceId], references: [id])
+  transportService TransportService?  @relation(fields: [transportServiceId], references: [id])
+  room             Room?              @relation(fields: [roomId], references: [id])
+  slot             AvailabilitySlot?  @relation(fields: [slotId], references: [id])
+  hold             AvailabilityHold?  @relation("HoldBooking", fields: [holdId], references: [id])
+  driver           Driver?            @relation(fields: [driverId], references: [id])
+  payments         Payment[]
+  commissions      Commission[]
+  refunds          Refund[]
+  review           Review?
+  itineraryItems   ItineraryItem[]
+  conversations    Conversation[]
+
+  @@index([userId, status])
+  @@index([providerId, status])
+}
+
+// ─── Money (D1: platform merchant of record) ─────────────────────────────────
+
+enum PaymentProviderName {
+  PAYSTACK
+  FLUTTERWAVE
+}
+
+enum PaymentStatus {
+  INITIALIZED
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model Payment {
+  id               String              @id @default(cuid())
+  bookingId        String
+  provider         PaymentProviderName
+  reference        String              @unique
+  amountMinor      Int
+  currencyCode     String              @default("GHS")
+  status           PaymentStatus       @default(INITIALIZED)
+  authorizationUrl String?
+  paidAt           DateTime?
+  meta             Json?
+  createdAt        DateTime            @default(now())
+
+  booking      Booking       @relation(fields: [bookingId], references: [id])
+  transactions Transaction[]
+  refunds      Refund[]
+
+  @@index([bookingId])
+}
+
+enum TransactionType {
+  CHARGE
+  REFUND
+  PAYOUT
+  ADJUSTMENT
+}
+
+model Transaction {
+  id           String          @id @default(cuid())
+  paymentId    String?
+  type         TransactionType
+  amountMinor  Int // signed: +charge −refund −payout
+  currencyCode String          @default("GHS")
+  status       String
+  description  String?
+  createdAt    DateTime        @default(now())
+
+  payment Payment? @relation(fields: [paymentId], references: [id])
+
+  @@index([paymentId])
+}
+
+model Refund {
+  id          String   @id @default(cuid())
+  paymentId   String
+  bookingId   String
+  amountMinor Int
+  reason      String?
+  status      String
+  providerRef String?
+  createdAt   DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+}
+
+model Commission {
+  id           String   @id @default(cuid())
+  bookingId    String
+  rateBps      Int
+  amountMinor  Int
+  currencyCode String   @default("GHS")
+  status       String
+  createdAt    DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@index([bookingId])
+}
+
+model ProviderPayout {
+  id              String    @id @default(cuid())
+  providerId      String
+  periodStart     DateTime
+  periodEnd       DateTime
+  grossMinor      Int
+  commissionMinor Int
+  netMinor        Int
+  currencyCode    String    @default("GHS")
+  status          String    @default("PENDING")
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  provider Provider @relation(fields: [providerId], references: [id])
+
+  @@index([providerId, status])
+}
+
+// ─── Engagement & platform ───────────────────────────────────────────────────
+
+enum ConversationType {
+  TRAVELER_PROVIDER
+  TRAVELER_DRIVER
+  TRAVELER_SUPPORT
+  PROVIDER_OPS
+}
+
+model Conversation {
+  id        String           @id @default(cuid())
+  type      ConversationType
+  tripId    String?
+  bookingId String?
+  createdAt DateTime         @default(now())
+
+  trip         Trip?                     @relation(fields: [tripId], references: [id])
+  booking      Booking?                  @relation(fields: [bookingId], references: [id])
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([tripId])
+  @@index([bookingId])
+}
+
+model ConversationParticipant {
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+}
+
+model Message {
+  id             String    @id @default(cuid())
+  conversationId String
+  senderUserId   String?
+  body           String
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User?        @relation(fields: [senderUserId], references: [id])
+
+  @@index([conversationId, createdAt])
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  PUSH
+  WHATSAPP
+}
+
+model Notification {
+  id        String              @id @default(cuid())
+  userId    String
+  channel   NotificationChannel
+  type      String
+  payload   Json
+  status    String              @default("QUEUED")
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+}
+
+enum ReviewTargetType {
+  HOTEL
+  DRIVER
+  TOUR
+  EXPERIENCE
+  TRANSPORT
+}
+
+model Review {
+  id           String           @id @default(cuid())
+  bookingId    String           @unique // verified bookings only (§22)
+  authorUserId String
+  providerId   String
+  targetType   ReviewTargetType
+  rating       Int
+  body         String?
+  photos       String[]
+  status       String           @default("PUBLISHED")
+  createdAt    DateTime         @default(now())
+
+  booking  Booking  @relation(fields: [bookingId], references: [id])
+  author   User     @relation(fields: [authorUserId], references: [id])
+  provider Provider @relation(fields: [providerId], references: [id])
+
+  @@index([providerId, status])
+}
+
+enum FavoriteTargetType {
+  DESTINATION
+  TOUR
+  EXPERIENCE
+  HOTEL
+  ATTRACTION
+  RESTAURANT
+  EVENT
+}
+
+model Favorite {
+  id         String             @id @default(cuid())
+  userId     String
+  targetType FavoriteTargetType
+  targetId   String
+  createdAt  DateTime           @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, targetType, targetId])
+}
+
+enum EnquiryStatus {
+  NEW
+  IN_REVIEW
+  QUOTED
+  CONVERTED
+  CLOSED
+}
+
+model Enquiry {
+  id                String        @id @default(cuid())
+  code              String        @unique
+  userId            String?
+  name              String
+  email             String
+  phone             String?
+  tripId            String?
+  startDate         DateTime?
+  endDate           DateTime?
+  adults            Int           @default(1)
+  children          Int           @default(0)
+  destinations      String[]
+  interests         String[]
+  budgetRange       String?
+  accommodationPref String?
+  transportPref     String?
+  specialRequests   String?
+  status            EnquiryStatus @default(NEW)
+  assignedAdminId   String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user User? @relation(fields: [userId], references: [id])
+  trip Trip? @relation(fields: [tripId], references: [id])
+
+  @@index([status, createdAt])
+}
+
+model Document {
+  id          String    @id @default(cuid())
+  ownerUserId String?
+  providerId  String?
+  type        String
+  fileUrl     String
+  verifiedAt  DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  owner    User?     @relation("DocumentOwner", fields: [ownerUserId], references: [id])
+  provider Provider? @relation(fields: [providerId], references: [id])
+
+  @@index([providerId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorUserId String?
+  action      String
+  entityType  String
+  entityId    String?
+  meta        Json?
+  ip          String?
+  createdAt   DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+}
