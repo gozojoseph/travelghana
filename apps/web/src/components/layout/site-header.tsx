@@ -7,6 +7,7 @@ import { Compass, Heart, Map, Ticket, User } from "lucide-react";
 const NAV = [
   { href: "/explore", label: "Explore", icon: Compass },
   { href: "/destinations", label: "Destinations", icon: Map },
+  { href: "/operator", label: "For operators", icon: User },
 ];
 
 /** Top header + mobile bottom nav (§35: Home / Explore / Trips / Favorites / Profile). */

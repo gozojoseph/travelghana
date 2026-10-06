@@ -8,9 +8,12 @@ import { PrismaModule } from "./common/prisma.module";
 import { SessionGuard } from "./common/guards/session.guard";
 
 import { AuthModule } from "./modules/auth/auth.module";
+import { CatalogModule } from "./modules/catalog/catalog.module";
 import { DestinationsModule } from "./modules/destinations/destinations.module";
 import { HealthModule } from "./modules/health/health.module";
 import { MapsModule } from "./modules/maps/maps.module";
+import { ListingModule } from "./modules/listings/listings.module";
+import { OperatorModule } from "./modules/operator/operator.module";
 import { UsersModule } from "./modules/users/users.module";
 
 /**
@@ -36,6 +39,9 @@ import { UsersModule } from "./modules/users/users.module";
     AuthModule,
     UsersModule,
     DestinationsModule,
+    ListingModule,
+    OperatorModule,
+    CatalogModule,
   ],
   providers: [
     // Global session auth + RBAC guard — @Public() opts out, @Roles() restricts.

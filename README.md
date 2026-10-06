@@ -32,6 +32,6 @@ pnpm dev                      # web :3000 · api :4000
 ## Docs
 
 - `docs/ARCHITECTURE.md` — product domains, technical architecture, sequence
-- `docs/ERD.md` — data model (draft, under review)
+- `docs/ERD.md` — data model (approved v0.2; 42 models / 24 enums)
 - `docs/DECISIONS.md` — decision log (D1–D9)
 - `docs/OPEN_QUESTIONS.md` — open questions + legal review checklist

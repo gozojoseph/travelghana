@@ -226,6 +226,33 @@ enum VerificationStatus {
   SUSPENDED
 }
 
+/** Status lifecycle for listings and services. DRAFT|PENDING_REVIEW|PUBLISHED|PAUSED|ARCHIVED. */
+enum ListingStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  PAUSED
+  ARCHIVED
+}
+
+/** Structured geographic context on providers and listings (D4: Mapbox-compatible). */
+model Location {
+  id                 String   @id @default(cuid())
+  address            String?
+  lat                Float?
+  lng                Float?
+  cityId             String? @db.Uuid
+  regionId           String? @db.Uuid
+  country            String   @default("Ghana")
+  postalCode         String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // cityId/regionId are direct FK scalars (not a relation): inverse arrays
+  // exist on City/Region but are pre-existing schema gaps mirroring
+  // Booking.*; generated client does not need them.
+}
+
 model Provider {
   id                 String             @id @default(cuid())
   userId             String?            @unique
@@ -237,14 +264,22 @@ model Provider {
   contactEmail       String?
   contactPhone       String?
   logoUrl            String?
-  cityId             String?
+  cityId             String? @db.Uuid
+  serviceArea        String?
+  coordinatesLat     Float?
+  coordinatesLng     Float?
+  country            String   @default("Ghana")
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
   user              User?              @relation(fields: [userId], references: [id])
+  // Inverse not materialized: direct FK scalars (cityId/regionId). Inverse
+  // arrays exist on City/Region but are pre-existing schema gaps mirroring
+  // Booking.*; generated client does not need them.
   city              City?              @relation(fields: [cityId], references: [id])
   tours             Tour[]
   experiences       Experience[]
+  listings          Listing[]
   hotels            Hotel[]
   transportServices TransportService[]
   vehicles          Vehicle[]
@@ -311,6 +346,55 @@ model Experience {
 
   @@unique([providerId, slug])
   @@index([cityId, published])
+}
+
+// ─── Reusable listings (D8: integer minor units, GHS default) ────────────────
+
+model Listing {
+  id                 String            @id @default(cuid())
+  providerId         String
+  slug               String
+  title              String
+  status             ListingStatus     @default(DRAFT)
+  description        String?
+  serviceArea        String?
+  durationMinutes    Int?
+  capacity           Int               @default(1)
+  priceMinor         Int
+  currencyCode       String            @default("GHS")
+  cityId             String? @db.Uuid
+  regionId           String? @db.Uuid
+  coordinatesLat     Float?
+  coordinatesLng     Float?
+  address            String?
+  meetingPoint       String?
+  category           String?
+  whatIsIncluded     String?
+  whatIsExcluded     String?
+  requirements       String?
+  cancellationPolicy String?
+  heroImageUrl       String?
+  publishedAt        DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  provider Provider    @relation(fields: [providerId], references: [id])
+  extension  ListingExtension?
+
+  @@unique([providerId, slug])
+  @@index([providerId, status, cityId])
+  @@index([status, publishedAt])
+}
+
+// ─── Listing/Service extension (reusable listing model) ──────────────────────
+
+model ListingExtension {
+  id              String   @id @default(cuid())
+  listingId       String   @unique
+  content         String?
+  updatedAt       DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
 
 model Hotel {

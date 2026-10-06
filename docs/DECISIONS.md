@@ -80,3 +80,33 @@ Dates: 2026-10-01.
 | FX display | Manual admin-set USD rates at MVP | Phase 2 |
 | Timezone | Africa/Accra for business-day logic | never likely to change |
 | Search | Postgres full-text first; Meilisearch later | scale requires it |
+
+## D10. Local dev database — embedded Postgres (temporary)
+- **Decision:** Local development uses an embedded Postgres 17 on localhost:5432
+  (`infrastructure/local-db.mjs`, data dir `node_modules/.local-postgres/data`) instead of
+  Docker Compose. `infrastructure/docker-compose.yml` is kept for machines where Docker works.
+- **Date:** 2026-10-03
+- **Reason:** Docker Desktop is installed but its engine fails (500) because WSL is not
+  installed on this machine; installing WSL requires admin + reboot, which is the product
+  owner's call. Embedded Postgres was the least-invasive way to get a real database.
+- **Alternatives:** Install WSL/Docker (blocked — needs admin/reboot); SQLite (rejected —
+  must validate against Postgres semantics).
+- **Consequences:** Dev DB is wiped/recreated via `prisma db push`; team members with working
+  Docker should use the compose file. Remove this workaround once WSL/Docker is available.
+
+## D11. Operator MVP scope — tours + experiences, four onboarding types (Buffy, recommended)
+- **Decision:** Operator self-service covers provider onboarding (one provider per account,
+  1:1) plus Tour and Experience listing CRUD with publish/unpublish. Onboarding types are
+  limited to those with a matching `Role`: TOUR_OPERATOR, HOTEL, EXPERIENCE_PROVIDER,
+  TRANSPORT_COMPANY. Hotels (rooms), transport (vehicles/drivers), events, restaurants and the
+  public catalog ship in later increments. Added `AnyRole` decorator (any-of authorization)
+  alongside the all-of `@Roles`.
+- **Date:** 2026-10-03
+- **Reason:** Tours and experiences share one shape (title/price/city/published) — smallest
+  slice that makes the marketplace two-sided. DRIVER_PARTNER belongs to the driver module;
+  EVENT_ORGANIZER/RESTAURANT have no RBAC role yet.
+- **Alternatives:** All listing types day 1 (rejected — large surface, thin value); all-of
+  role check per route (rejected — would force operators to hold every operator role).
+- **Consequences:** Operators self-publish at MVP (open question #11 covers whether admin
+  verification should gate that); slug generation is name/title-based with numeric suffixes;
+  ownership scoping returns 404 (no existence oracle) for foreign listings.

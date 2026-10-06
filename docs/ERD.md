@@ -1,7 +1,16 @@
-# ERD — TravelGhana v0.1 (for review)
+# ERD — TravelGhana v0.2 (approved)
 
-Status: **DRAFT — awaiting your review before modules are built.**
-Prisma schema draft: `packages/database/prisma/schema.prisma`
+Status: **APPROVED — implemented.** `packages/database/prisma/schema.prisma` is the
+authoritative artifact; this document is its human-readable summary. Where the two
+disagree, the schema wins and this file is the bug.
+
+**Source of truth:** `packages/database/prisma/schema.prisma` — **42 models, 24 enums.**
+D3 (multi-role) and D5 (operator-first) confirmed by product owner; see `DECISIONS.md`.
+
+> **Version history.** v0.1 was circulated for review. v0.2 is the approved design as
+> landed. Note that an earlier status line on this file claimed "34 models" and a
+> "DRAFT — awaiting review" status; both were stale and were corrected on 2026-10-02
+> once the schema was reconciled against this document.
 
 ## Domains and relations
 
@@ -131,8 +140,20 @@ AuditLog { id, actorUserId?, action, entityType, entityId, metaJson, ip?, create
 ## Design notes
 1. **Multi-role (D3):** roles are rows (`RoleMembership`), permissions checked per role; a role
    switcher in the UI. Additive — new roles require no migration.
-2. **Polymorphic bookables:** `Booking.bookableType` + nullable FKs keeps one booking pipeline;
-   enforced by a CHECK + service-layer validation. Revisit if a 4th bookable type appears.
+2. **Polymorphic bookables:** `Booking.bookableType` + nullable FKs keeps one booking pipeline.
+   **Not currently enforced.** An earlier version of this note claimed integrity was
+   "enforced by a CHECK + service-layer validation"; neither existed. Prisma cannot
+   express a CHECK constraint (it needs a hand-written SQL migration), and as of
+   2026-10-02 `bookableType` appeared nowhere in application code, because the booking
+   pipeline has not been built yet. The schema therefore still permits rows such as
+   `bookableType = TOUR` with `tourId` null, or with `roomId` set instead.
+
+   **Required before bookings are live** (tracked, not yet done):
+   - a raw SQL migration adding a CHECK tying `bookableType` to exactly one non-null FK;
+   - service-layer validation at booking creation;
+   - `Provider`/`userId` consistency is *not* covered by this and still relies on the
+     service layer.
+   Revisit if a 4th bookable type appears.
 3. **Operator-first (D5):** `Provider.userId` and `Driver.userId` nullable so ops can create
    inventory before a provider account exists; ownership is claimed during Phase 2 onboarding.
 4. **Privacy (§11):** `TravelerNeed.providerVisibility` + audit logging of detail access;
@@ -140,4 +161,3 @@ AuditLog { id, actorUserId?, action, entityType, entityId, metaJson, ip?, create
 5. **Money (D8):** integers only, explicit currency, no floats; commission stored as basis
    points so rates stay configurable (D5 defers actual rates).
 6. **Verified reviews (§22):** `Review.bookingId` unique ⇒ review only from a completed booking.
-```

@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, Injectable } from "@nestjs/common";
 import type { Request } from "express";
 
 import { ApiError } from "../errors/api-error";
-import { ROLES_KEY } from "../decorators/roles.decorator";
+import { ANY_ROLES_KEY, ROLES_KEY } from "../decorators/roles.decorator";
 import { AuthService } from "../../modules/auth/auth.service";
 import { Reflector } from "@nestjs/core";
 import { Role } from "@travelghana/database";
@@ -51,6 +51,16 @@ export class SessionGuard implements CanActivate {
       const held = new Set(session.user.roles);
       const missing = requiredRoles.filter((r) => !held.has(r));
       if (missing.length > 0) throw ApiError.forbidden();
+    }
+
+    // Any-of authorization: hold at least one of the listed roles.
+    const anyRoles = this.reflector.getAllAndOverride<Role[] | undefined>(ANY_ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (anyRoles && anyRoles.length > 0) {
+      const held = new Set(session.user.roles);
+      if (!anyRoles.some((r) => held.has(r))) throw ApiError.forbidden();
     }
 
     return true;

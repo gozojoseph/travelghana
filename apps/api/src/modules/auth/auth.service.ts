@@ -3,6 +3,7 @@ import type { Role, Session, User } from "@travelghana/database";
 import type { AuthResponse, SessionUser } from "@travelghana/types";
 
 import { ApiError } from "../../common/errors/api-error";
+import { primaryWebAppUrl } from "../../common/config/app-urls";
 import { toSessionUser } from "../../common/mappers/session-user.mapper";
 import { PrismaService } from "../../common/prisma.service";
 import type { AuthenticatedRequest } from "../../common/guards/session.guard";
@@ -183,7 +184,7 @@ export class AuthService implements OnModuleInit {
         expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
       },
     });
-    const url = `${process.env.WEB_APP_URL ?? "http://localhost:3000"}/reset-password?token=${raw}`;
+    const url = `${primaryWebAppUrl()}/reset-password?token=${raw}`;
     await this.mailer.send({
       to: user.email,
       subject: "Reset your TravelGhana password",
@@ -266,7 +267,7 @@ export class AuthService implements OnModuleInit {
         expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
       },
     });
-    const url = `${process.env.WEB_APP_URL ?? "http://localhost:3000"}/verify-email?token=${raw}`;
+    const url = `${primaryWebAppUrl()}/verify-email?token=${raw}`;
     await this.mailer.send({
       to: user.email,
       subject: "Verify your TravelGhana email",
