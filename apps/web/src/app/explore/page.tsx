@@ -25,6 +25,9 @@ export default async function ExplorePage({
 
   const list = await fetchDestinations({ category, pageSize: 24 });
   const destinations = list?.items ?? [];
+  // No Mapbox token -> no map section at all on Explore (the list fallback lives on the
+  // destination detail page, where it doubles as the attractions index).
+  const hasMapbox = Boolean(process.env.NEXT_PUBLIC_MAPBOX_TOKEN);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -51,24 +54,26 @@ export default async function ExplorePage({
       </nav>
 
       {destinations.length === 0 ? (
-        <p className="mt-10 rounded-card border border-border bg-card p-6 text-sm text-muted-foreground">
+        <p className="animate-rise mt-10 rounded-card border border-border bg-card p-6 text-sm text-muted-foreground">
           No destinations to show yet{category ? " in this category" : ""}. The API may still be
           starting — try again shortly.
         </p>
       ) : (
         <>
-          <section aria-label="Map of destinations" className="mt-8">
-            <MapView
-              markers={destinations.map((d) => ({
-                lat: d.lat,
-                lng: d.lng,
-                label: d.name,
-                href: `/destinations/${d.slug}`,
-              }))}
-            />
-          </section>
+          {hasMapbox && (
+            <section aria-label="Map of destinations" className="mt-8">
+              <MapView
+                markers={destinations.map((d) => ({
+                  lat: d.lat,
+                  lng: d.lng,
+                  label: d.name,
+                  href: `/destinations/${d.slug}`,
+                }))}
+              />
+            </section>
+          )}
           <section aria-label="Destinations" className="mt-8">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="tg-stagger grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {destinations.map((d) => (
                 <DestinationCard key={d.id} destination={d} />
               ))}
@@ -93,7 +98,7 @@ function FilterChip({
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-[background-color,color,transform] duration-150 active:scale-95 ${
         active
           ? "bg-primary text-primary-foreground"
           : "border border-border bg-card text-muted-foreground hover:text-foreground"

@@ -21,21 +21,6 @@ export type BookingStatus =
   | "REFUNDED"
   | "EXPIRED";
 
-export type EnquiryStatus = "NEW" | "IN_REVIEW" | "QUOTED" | "CONVERTED" | "CLOSED";
-
-export type TripStatus =
-  | "PLANNING"
-  | "CONFIRMED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "CANCELLED";
-
-/** Monetary amounts cross service boundaries as minor units + explicit currency (D8). */
-export interface Money {
-  amountMinor: number;
-  currencyCode: string;
-}
-
 // ─── Auth / identity ─────────────────────────────────────────────────────────
 
 export interface SessionUser {
@@ -69,3 +54,28 @@ export interface HealthResponse {
   service: string;
   timestamp: string;
 }
+
+// ─── Trip planner (§14) ──────────────────────────────────────────────────────
+
+export * from "./trips";
+
+// ─── Curated packages (admin-managed) ────────────────────────────────────────
+
+export * from "./packages";
+
+// ─── Gallery (admin-managed) ─────────────────────────────────────────────────
+
+export * from "./gallery";
+
+// ─── Trip enquiries (D6 concierge workflow, Phase 2) ─────────────────────────
+
+export * from "./enquiries";
+export * from "./admin";
+export * from "./settings";
+export * from "./bookings";
+export * from "./listing-bookings";
+export * from "./users";
+export * from "./insights";
+export * from "./notifications";
+export * from "./reviews";
+export * from "./uploads";

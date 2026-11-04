@@ -39,24 +39,27 @@ export default async function ToursPage({ searchParams }: Props) {
               name="q"
               defaultValue={q ?? ""}
               placeholder="Search tours…"
-              className="w-56 rounded-card border border-border bg-card py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
+              className="w-56 rounded-card border border-border bg-card py-2.5 pl-9 pr-4 text-sm outline-none transition-colors focus:border-primary"
             />
           </div>
-          <button type="submit" className="rounded-card bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">
+          <button
+            type="submit"
+            className="rounded-card bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-[background-color,transform] duration-150 hover:bg-primary/90 active:scale-[0.98]"
+          >
             Search
           </button>
         </form>
       </header>
 
       {tours.length === 0 ? (
-        <div className="mt-12 rounded-card border border-dashed border-border p-12 text-center">
+        <div className="animate-rise mt-12 rounded-card border border-dashed border-border p-12 text-center">
           <p className="font-medium">No tours found</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {q ? "Try a different search term." : "Operators are adding tours — check back soon."}
           </p>
         </div>
       ) : (
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="tg-stagger mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {tours.map((tour) => (
             <ListingCard key={tour.id} listing={{ ...tour, kind: "tour" }} />
           ))}

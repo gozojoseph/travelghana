@@ -1,4 +1,4 @@
-import { createHash, randomBytes, scrypt, timingSafeEqual } from "crypto";
+import { createHash, randomBytes, randomInt, scrypt, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
 /**
@@ -36,4 +36,9 @@ export function generateToken(bytes = 32): string {
 export function hashToken(token: string): string {
   // Tokens are high-entropy; a fast SHA-256 hash is sufficient and indexable.
   return createHash("sha256").update(token).digest("hex");
+}
+
+/** Human-verifiable 6-digit code (cryptographically random, zero-padded). */
+export function generateCode(): string {
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }

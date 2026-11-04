@@ -1,0 +1,206 @@
+{
+    "version":  1,
+    "note":  "Resolved via the Wikimedia Commons API (action=query generator=search over gsrnamespace=6, imageinfo with extmetadata) on 2026-10-20. The file/token URLs in entries.thumb are recorded verbatim from the API response; scripts/fetch-destination-images.ps1 derives the final download URLs from them.",
+    "entries":  [
+                    {
+                        "slug":  "cape-coast-castle",
+                        "file":  "File:Castle, Cape Coast (P1100223).jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Castle,_Cape_Coast_(P1100223).jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Castle%2C_Cape_Coast_%28P1100223%29.jpg/1920px-Castle%2C_Cape_Coast_%28P1100223%29.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Matti Blume",
+                        "license":  "CC BY-SA 4.0",
+                        "width":  4608,
+                        "height":  3456
+                    },
+                    {
+                        "slug":  "elmina-castle",
+                        "file":  "File:Elmina Castle - Ghana.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Elmina_Castle_-_Ghana.jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a7/Elmina_Castle_-_Ghana.jpg/1920px-Elmina_Castle_-_Ghana.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Damien Halleux Radermecker",
+                        "license":  "CC BY-SA 2.0",
+                        "width":  6300,
+                        "height":  4200
+                    },
+                    {
+                        "slug":  "kakum-national-park",
+                        "file":  "File:Canopy walkway in Kakum National Park 6.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Canopy_walkway_in_Kakum_National_Park_6.jpg",
+                        "thumb":  "https://upload.wikimedia.org/wikipedia/commons/7/72/Canopy_walkway_in_Kakum_National_Park_6.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail_unscaled",
+                        "author":  "Ibnali1",
+                        "license":  "CC BY-SA 4.0",
+                        "width":  1600,
+                        "height":  1200
+                    },
+                    {
+                        "slug":  "kwame-nkrumah-memorial-park",
+                        "file":  "File:Kwame Nkrumah mausoleum - panoramio.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Kwame_Nkrumah_mausoleum_-_panoramio.jpg",
+                        "thumb":  "https://upload.wikimedia.org/wikipedia/commons/4/44/Kwame_Nkrumah_mausoleum_-_panoramio.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail_unscaled",
+                        "author":  "Simon Ontoyin",
+                        "license":  "CC BY-SA 3.0",
+                        "width":  1600,
+                        "height":  1200
+                    },
+                    {
+                        "slug":  "independence-square",
+                        "file":  "File:Independence Square, Korle-Klottey (IMG 20230201 120939).jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Independence_Square,_Korle-Klottey_(IMG_20230201_120939).jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Independence_Square%2C_Korle-Klottey_%28IMG_20230201_120939%29.jpg/1920px-Independence_Square%2C_Korle-Klottey_%28IMG_20230201_120939%29.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Matti Blume",
+                        "license":  "CC BY-SA 4.0",
+                        "width":  3104,
+                        "height":  4192
+                    },
+                    {
+                        "slug":  "labadi-beach",
+                        "file":  "File:Labadi beach 3.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Labadi_beach_3.jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Labadi_beach_3.jpg/1920px-Labadi_beach_3.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Cca Raheem",
+                        "license":  "CC BY 4.0",
+                        "width":  4032,
+                        "height":  3024
+                    },
+                    {
+                        "slug":  "jamestown-lighthouse",
+                        "file":  "File:Lighthouse at Jamestown in Accra.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Lighthouse_at_Jamestown_in_Accra.jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Lighthouse_at_Jamestown_in_Accra.jpg/1920px-Lighthouse_at_Jamestown_in_Accra.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Adotey Hoffman",
+                        "license":  "CC BY-SA 3.0",
+                        "width":  2304,
+                        "height":  1728
+                    },
+                    {
+                        "slug":  "makola-market",
+                        "file":  "File:Makola Market Entrance, Accra, Ghana.JPG",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Makola_Market_Entrance,_Accra,_Ghana.JPG",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/46/Makola_Market_Entrance%2C_Accra%2C_Ghana.JPG/1920px-Makola_Market_Entrance%2C_Accra%2C_Ghana.JPG?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Benggriff",
+                        "license":  "CC BY-SA 3.0",
+                        "width":  5184,
+                        "height":  3456
+                    },
+                    {
+                        "slug":  "shai-hills-resource-reserve",
+                        "file":  "File:Shai Hills, Shai-Osudoku (P1100110).jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Shai_Hills,_Shai-Osudoku_(P1100110).jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9c/Shai_Hills%2C_Shai-Osudoku_%28P1100110%29.jpg/1920px-Shai_Hills%2C_Shai-Osudoku_%28P1100110%29.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Matti Blume",
+                        "license":  "CC BY-SA 4.0",
+                        "width":  2696,
+                        "height":  3370
+                    },
+                    {
+                        "slug":  "aburi-botanical-gardens",
+                        "file":  "File:Aburi Botanical Gardens 05.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Aburi_Botanical_Gardens_05.jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Aburi_Botanical_Gardens_05.jpg/1920px-Aburi_Botanical_Gardens_05.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Nkansahrexford",
+                        "license":  "CC BY-SA 4.0",
+                        "width":  3936,
+                        "height":  5248
+                    },
+                    {
+                        "slug":  "boti-falls",
+                        "file":  "File:Boti Falls, Ghana.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Boti_Falls,_Ghana.jpg",
+                        "thumb":  "https://upload.wikimedia.org/wikipedia/commons/8/85/Boti_Falls%2C_Ghana.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail_unscaled",
+                        "author":  "Newfoundlandguy",
+                        "license":  "CC0",
+                        "width":  1600,
+                        "height":  1200
+                    },
+                    {
+                        "slug":  "wli-waterfalls",
+                        "file":  "File:Wli Lower Fall-4.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Wli_Lower_Fall-4.jpg",
+                        "thumb":  "https://upload.wikimedia.org/wikipedia/commons/e/e7/Wli_Lower_Fall-4.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail_unscaled",
+                        "author":  "Stig Nygaard",
+                        "license":  "CC BY 2.0",
+                        "width":  1920,
+                        "height":  2560
+                    },
+                    {
+                        "slug":  "mount-afadja",
+                        "file":  "File:Beautiful Landscape view on the Afadjato Mountain in Ghana.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Beautiful_Landscape_view_on_the_Afadjato_Mountain_in_Ghana.jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2e/Beautiful_Landscape_view_on_the_Afadjato_Mountain_in_Ghana.jpg/1920px-Beautiful_Landscape_view_on_the_Afadjato_Mountain_in_Ghana.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Treysam",
+                        "license":  "CC BY-SA 4.0",
+                        "width":  6000,
+                        "height":  4000
+                    },
+                    {
+                        "slug":  "lake-bosomtwe",
+                        "file":  "File:Lake Bosomtwe 102.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Lake_Bosomtwe_102.jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1d/Lake_Bosomtwe_102.jpg/1920px-Lake_Bosomtwe_102.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Amuzujoe",
+                        "license":  "CC BY-SA 4.0",
+                        "width":  4928,
+                        "height":  3280
+                    },
+                    {
+                        "slug":  "manhyia-palace-museum",
+                        "file":  "File:Manhyia Palace Museum.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Manhyia_Palace_Museum.jpg",
+                        "thumb":  "https://upload.wikimedia.org/wikipedia/commons/0/0a/Manhyia_Palace_Museum.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail_unscaled",
+                        "author":  "Nkansahrexford",
+                        "license":  "CC BY-SA 3.0",
+                        "width":  720,
+                        "height":  480
+                    },
+                    {
+                        "slug":  "kejetia-market",
+                        "file":  "File:Modern market hall of Kejetia market.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Modern_market_hall_of_Kejetia_market.jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/29/Modern_market_hall_of_Kejetia_market.jpg/1920px-Modern_market_hall_of_Kejetia_market.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Afus199620",
+                        "license":  "CC0",
+                        "width":  4032,
+                        "height":  3024
+                    },
+                    {
+                        "slug":  "mole-national-park",
+                        "file":  "File:Mole National Park, West Gonja (P1100443).jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Mole_National_Park,_West_Gonja_(P1100443).jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1e/Mole_National_Park%2C_West_Gonja_%28P1100443%29.jpg/1920px-Mole_National_Park%2C_West_Gonja_%28P1100443%29.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Matti Blume",
+                        "license":  "CC BY-SA 4.0",
+                        "width":  4608,
+                        "height":  3456
+                    },
+                    {
+                        "slug":  "larabanga-mosque",
+                        "file":  "File:Larabanga Mosque Ghana.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Larabanga_Mosque_Ghana.jpg",
+                        "thumb":  "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/31/Larabanga_Mosque_Ghana.jpg/1920px-Larabanga_Mosque_Ghana.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail",
+                        "author":  "Sathyan Velumani",
+                        "license":  "CC BY-SA 3.0",
+                        "width":  2194,
+                        "height":  1457
+                    },
+                    {
+                        "slug":  "busua-beach",
+                        "file":  "File:Busua Beach Resort setting in Western region, Ghana.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Busua_Beach_Resort_setting_in_Western_region,_Ghana.jpg",
+                        "thumb":  "https://upload.wikimedia.org/wikipedia/commons/2/25/Busua_Beach_Resort_setting_in_Western_region%2C_Ghana.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail_unscaled",
+                        "author":  "Mac-Jordan Degadjor",
+                        "license":  "CC BY 2.0",
+                        "width":  1280,
+                        "height":  960
+                    },
+                    {
+                        "slug":  "nzulezo-stilt-village",
+                        "file":  "File:Nzulezo stilt village.jpg",
+                        "page":  "https://commons.wikimedia.org/wiki/File:Nzulezo_stilt_village.jpg",
+                        "thumb":  "https://upload.wikimedia.org/wikipedia/commons/5/50/Nzulezo_stilt_village.jpg?utm_source=commons.wikimedia.org\u0026utm_campaign=imageinfo\u0026utm_content=thumbnail_unscaled",
+                        "author":  "Luke Bosman",
+                        "license":  "CC BY-SA 1.0",
+                        "width":  1752,
+                        "height":  1232
+                    }
+                ]
+}

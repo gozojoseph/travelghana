@@ -1,11 +1,28 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { Compass, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
+import { Logo } from "@/components/brand/logo";
 import { api, ApiClientError, validationIssues } from "@/lib/api";
 
 type Mode = "login" | "register";
+
+/**
+ * Only same-origin paths are accepted, so `?next=` cannot become an open
+ * redirect. Absolute URLs (including protocol-relative `//host`) fall back.
+ */
+function nextPath(fallback = "/account"): string {
+  const raw = new URLSearchParams(window.location.search).get("next");
+  if (!raw) return fallback;
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.origin !== window.location.origin) return fallback;
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return fallback;
+  }
+}
 
 /**
  * Shared auth form (§52 reusable components). Client-side zod-equivalent checks
@@ -34,7 +51,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       } else {
         await api.login({ email, password });
       }
-      window.location.href = "/account";
+      window.location.href = nextPath();
     } catch (err) {
       if (err instanceof ApiClientError) {
         const issues = validationIssues(err);
@@ -56,11 +73,9 @@ export function AuthForm({ mode }: { mode: Mode }) {
     "w-full rounded-card border border-border bg-card px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary";
 
   return (
-    <div className="mx-auto w-full max-w-md">
+    <div className="animate-rise mx-auto w-full max-w-md">
       <div className="mb-8 flex flex-col items-center gap-2 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          <Compass aria-hidden className="h-6 w-6" />
-        </div>
+        <Logo className="h-16 w-auto" />
         <h1 className="font-display text-3xl">
           {mode === "login" ? "Welcome back" : "Create your account"}
         </h1>
@@ -130,15 +145,26 @@ export function AuthForm({ mode }: { mode: Mode }) {
         </div>
 
         {formError && (
-          <p role="alert" className="rounded-card bg-accent/10 px-4 py-3 text-sm text-accent">
+          <p role="alert" className="animate-pop rounded-card bg-accent/10 px-4 py-3 text-sm text-accent">
             {formError}
           </p>
+        )}
+
+        {mode === "login" && (
+          <div className="-mt-2 flex justify-end">
+            <a
+              href="/forgot-password"
+              className="text-xs font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground"
+            >
+              Forgot your password?
+            </a>
+          </div>
         )}
 
         <button
           type="submit"
           disabled={pending}
-          className="mt-2 inline-flex items-center justify-center gap-2 rounded-card bg-primary px-6 py-3 font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+          className="mt-2 inline-flex items-center justify-center gap-2 rounded-card bg-primary px-6 py-3 font-semibold text-primary-foreground transition-[background-color,transform] duration-150 hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60"
         >
           {pending && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}
           {mode === "login" ? "Log in" : "Create account"}

@@ -19,6 +19,14 @@ export const colors = {
   textSecondary: "#65736B",
   /** Cards */
   card: "#FFFFFF",
+  /** Deep evergreen — footer surface (dark) */
+  footer: "#0B2E1D",
+  /** Warm Ivory — main text on the footer surface */
+  footerForeground: "#FFFDF7",
+  /** Soft sage — secondary text on the footer surface */
+  footerMuted: "#93A89A",
+  /** Divider on the footer surface */
+  footerBorder: "#1D3F2C",
 } as const;
 
 export const typography = {

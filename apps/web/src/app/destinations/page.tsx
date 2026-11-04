@@ -29,12 +29,12 @@ export default async function DestinationsPage({
       </p>
 
       {!list || list.items.length === 0 ? (
-        <p className="mt-10 rounded-card border border-border bg-card p-6 text-sm text-muted-foreground">
+        <p className="animate-rise mt-10 rounded-card border border-border bg-card p-6 text-sm text-muted-foreground">
           Destination guides are being prepared. Check back soon.
         </p>
       ) : (
         <>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="tg-stagger mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {list.items.map((d) => (
               <DestinationCard key={d.id} destination={d} />
             ))}
@@ -46,7 +46,7 @@ export default async function DestinationsPage({
                   key={p}
                   href={`/destinations?page=${p}`}
                   aria-current={p === list.page ? "page" : undefined}
-                  className={`rounded-card px-4 py-2 text-sm font-medium ${
+                  className={`rounded-card px-4 py-2 text-sm font-medium transition-[background-color,transform] duration-150 active:scale-95 ${
                     p === list.page ? "bg-primary text-primary-foreground" : "border border-border"
                   }`}
                 >

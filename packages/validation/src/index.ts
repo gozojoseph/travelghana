@@ -20,27 +20,28 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-export const enquirySchema = z.object({
-  name: z.string().trim().min(2).max(120),
-  email: emailSchema,
-  phone: z.string().trim().max(30).optional(),
-  startDate: z.string().date().optional(),
-  endDate: z.string().date().optional(),
-  adults: z.number().int().min(1).max(30).default(1),
-  children: z.number().int().min(0).max(20).default(0),
-  destinations: z.array(z.string().trim().min(1)).max(20).default([]),
-  interests: z.array(z.string().trim().min(1)).max(20).default([]),
-  budgetRange: z.string().trim().max(60).optional(),
-  accommodationPref: z.string().trim().max(500).optional(),
-  transportPref: z.string().trim().max(500).optional(),
-  specialRequests: z.string().trim().max(2000).optional(),
-});
-
 export const verifyEmailSchema = z.object({
   token: z.string().min(10).max(200),
 });
 
 export const resendVerificationSchema = z.object({}).passthrough();
+
+/** 6-digit lifecycle code typed from the email body (D35). */
+export const lifecycleCodeSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/, "Enter the 6-digit code from your email");
+
+export const verifyEmailByCodeSchema = z.object({
+  email: emailSchema,
+  code: lifecycleCodeSchema,
+});
+
+export const resetPasswordByCodeSchema = z.object({
+  email: emailSchema,
+  code: lifecycleCodeSchema,
+  password: passwordSchema,
+});
 
 export const forgotPasswordSchema = z.object({
   email: emailSchema,
@@ -60,10 +61,11 @@ export const updateProfileSchema = z
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
-export type EnquiryInput = z.infer<typeof enquirySchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
+export type VerifyEmailByCodeInput = z.infer<typeof verifyEmailByCodeSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ResetPasswordByCodeInput = z.infer<typeof resetPasswordByCodeSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
 // ─── Destinations / explore ─────────────────────────────────────────────────
@@ -254,8 +256,17 @@ export const statusTransitionSchema = z
 export const reviewActionSchema = z
   .object({
     reviewStatus: z.enum(["APPROVE", "REJECT", "SUSPEND"]),
+    /**
+     * Reason for the decision. Required for REJECT so the provider gets a
+     * real explanation (it lands in the audit trail and the notification
+     * payload); optional elsewhere.
+     */
+    note: z.string().trim().max(500).optional(),
   })
-  .refine((v) => v.reviewStatus !== undefined, { message: "Missing reviewStatus" });
+  .refine((v) => v.reviewStatus !== "REJECT" || (v.note !== undefined && v.note.length >= 4), {
+    message: "A reason of at least 4 characters is required when rejecting",
+    path: ["note"],
+  });
 
 export type CatalogListQuery = z.infer<typeof catalogListQuerySchema>;
 export type ProviderListingSlugParams = z.infer<typeof providerListingSlugSchema>;
@@ -271,3 +282,27 @@ export type TourCreateInput = z.infer<typeof tourCreateSchema>;
 export type TourUpdateInput = z.infer<typeof tourUpdateSchema>;
 export type ExperienceCreateInput = z.infer<typeof experienceCreateSchema>;
 export type ExperienceUpdateInput = z.infer<typeof experienceUpdateSchema>;
+
+// ─── Trip planner (§14) ──────────────────────────────────────────────────────
+
+export * from "./trips";
+
+// ─── Curated packages (admin-managed) ────────────────────────────────────────
+
+export * from "./packages";
+
+// ─── Gallery (admin-managed) ─────────────────────────────────────────────────
+
+export * from "./gallery";
+
+// ─── Trip enquiries (D6 concierge workflow, Phase 2) ─────────────────────────
+
+export * from "./enquiries";
+export * from "./admin";
+export * from "./catalog";
+export * from "./settings";
+export * from "./bookings";
+export * from "./listing-bookings";
+export * from "./insights";
+export * from "./notifications";
+export * from "./reviews";

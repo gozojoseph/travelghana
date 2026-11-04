@@ -13,7 +13,7 @@ export function DestinationCard({ destination }: { destination: DestinationDto }
   return (
     <Link
       href={`/destinations/${destination.slug}`}
-      className="group flex flex-col overflow-hidden rounded-card border border-border bg-card transition-shadow hover:shadow-md focus-visible:outline-primary"
+      className="group flex flex-col overflow-hidden rounded-card border border-border bg-card transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-primary"
     >
       <div className="flex h-40 items-center justify-center bg-primary/10">
         {destination.heroImageUrl ? (
@@ -21,10 +21,13 @@ export function DestinationCard({ destination }: { destination: DestinationDto }
           <img
             src={destination.heroImageUrl}
             alt=""
-            className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <MapPin aria-hidden className="h-10 w-10 text-primary/50" />
+          <MapPin
+            aria-hidden
+            className="h-10 w-10 text-primary/50 transition-transform duration-300 group-hover:scale-110"
+          />
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-4">

@@ -5,15 +5,15 @@ import { NestFactory } from "@nestjs/core";
 import cookieParser from "cookie-parser";
 
 import { AppModule } from "./app.module";
-import { webAppUrls } from "./common/config/app-urls";
+import { adminAppUrls, webAppUrls } from "./common/config/app-urls";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: false });
 
-  const adminAppUrl = process.env.ADMIN_APP_URL ?? "http://localhost:3001";
   app.enableCors({
-    // WEB_APP_URL may list several browser origins (localhost + LAN IP).
-    origin: [...webAppUrls(), adminAppUrl],
+    // WEB_APP_URL / ADMIN_APP_URL may each list several browser origins
+    // (localhost + LAN IP in dev; main site + admin subdomain in production).
+    origin: [...webAppUrls(), ...adminAppUrls()],
     credentials: true, // session cookies (§40)
   });
 

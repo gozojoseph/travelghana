@@ -51,4 +51,32 @@ export class CatalogController {
   ): Promise<Experience> {
     return this.catalog.getExperience(params);
   }
+
+  @Public()
+  @Get("attractions")
+  attractions(
+    @Query(new ZodValidationPipe(catalogListQuerySchema))
+    query: z.infer<typeof catalogListQuerySchema>,
+  ) {
+    return this.catalog.listAttractions(query);
+  }
+
+  /** Transport listings requestable through the quote flow (D43). */
+  @Public()
+  @Get("transport")
+  transportListings(
+    @Query(new ZodValidationPipe(catalogListQuerySchema))
+    query: z.infer<typeof catalogListQuerySchema>,
+  ) {
+    return this.catalog.listTransportListings(query);
+  }
+
+  @Public()
+  @Get("transport/:providerSlug/:listingSlug")
+  transportListing(
+    @Param(new ZodValidationPipe(providerListingSlugSchema))
+    params: z.infer<typeof providerListingSlugSchema>,
+  ) {
+    return this.catalog.getTransportListing(params);
+  }
 }

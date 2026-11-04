@@ -22,6 +22,8 @@
   "devDependencies": {
     "@embedded-postgres/windows-x64": "18.4.0-beta.17",
     "@eslint/js": "^9.39.5",
+    "@neon/config": "^1.9.3",
+    "@neon/env": "^1.6.4",
     "@next/eslint-plugin-next": "^15.5.27",
     "embedded-postgres": "18.4.0-beta.17",
     "eslint": "^9",

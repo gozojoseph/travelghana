@@ -18,3 +18,7 @@ packages/database/src/generated/
 # misc
 .DS_Store
 *.log
+.neon
+
+# local-disk uploads (D45 storage abstraction dev driver)
+uploads/

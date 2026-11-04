@@ -30,10 +30,18 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md">
         <h1 className="font-display text-3xl">Reset your password</h1>
         {sent ? (
-          <p className="mt-4 rounded-card bg-muted px-4 py-3 text-sm">
-            If an account exists for that email, a reset link is on its way. Check your inbox —
-            the link expires in 1 hour.
-          </p>
+          <div className="mt-4 rounded-card bg-muted px-4 py-3 text-sm">
+            <p>
+              If an account exists for that email, a password-reset email is on
+              its way. The link and the 6-digit code inside both expire in 1 hour.
+            </p>
+            <p className="mt-2">
+              If the link does not open, paste the code from the email directly:{" "}
+              <Link href="/reset-password" className="font-medium text-primary underline-offset-4 hover:underline">
+                Enter the 6-digit code
+              </Link>
+            </p>
+          </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4">
             <div>

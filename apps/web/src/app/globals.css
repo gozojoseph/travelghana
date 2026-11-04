@@ -17,6 +17,11 @@
   --tg-muted: #f4f1e8;
   --tg-border: #e7e2d4;
 
+  --tg-footer: #0b2e1d; /* Deep evergreen — dark footer surface */
+  --tg-footer-foreground: #fffdf7; /* Warm Ivory — main text on the footer */
+  --tg-footer-muted: #93a89a; /* Soft sage — secondary text on the footer */
+  --tg-footer-border: #1d3f2c; /* Divider on the footer */
+
   --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
   --font-display: "DM Serif Display", Georgia, serif;
 }
@@ -35,5 +40,53 @@
   :focus-visible {
     outline: 2px solid var(--tg-primary);
     outline-offset: 2px;
+  }
+}
+
+/*
+ * Motion system. Entrance animations are short and decorative; `.tg-stagger`
+ * cascades list/grid children without prop drilling or extra markup.
+ */
+@layer utilities {
+  .tg-stagger > * {
+    @apply animate-rise;
+  }
+
+  .tg-stagger > :nth-child(2) {
+    animation-delay: 50ms;
+  }
+  .tg-stagger > :nth-child(3) {
+    animation-delay: 100ms;
+  }
+  .tg-stagger > :nth-child(4) {
+    animation-delay: 150ms;
+  }
+  .tg-stagger > :nth-child(5) {
+    animation-delay: 200ms;
+  }
+  .tg-stagger > :nth-child(6) {
+    animation-delay: 250ms;
+  }
+  .tg-stagger > :nth-child(7) {
+    animation-delay: 300ms;
+  }
+  .tg-stagger > :nth-child(8) {
+    animation-delay: 350ms;
+  }
+  .tg-stagger > :nth-child(n + 9) {
+    animation-delay: 400ms;
+  }
+}
+
+/* Decoration only: users who ask for less motion get none (WCAG 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

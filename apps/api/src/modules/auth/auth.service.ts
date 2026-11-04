@@ -8,8 +8,9 @@ import { toSessionUser } from "../../common/mappers/session-user.mapper";
 import { PrismaService } from "../../common/prisma.service";
 import type { AuthenticatedRequest } from "../../common/guards/session.guard";
 
-import { MAILER, Mailer } from "./mailer";
-import { generateToken, hashPassword, hashToken, verifyPassword } from "./passwords";
+import { MAILER, Mailer } from "../mail/mailer";
+import { resetEmail, verificationEmail } from "../mail/email-templates";
+import { generateCode, generateToken, hashPassword, hashToken, verifyPassword } from "./passwords";
 
 export const SESSION_COOKIE = "tg_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -160,16 +161,19 @@ export class AuthService implements OnModuleInit {
     if (!record || record.consumedAt || record.expiresAt < new Date()) {
       throw ApiError.badRequest("Invalid or expired verification link", "INVALID_TOKEN");
     }
-    await this.prisma.$transaction([
-      this.prisma.emailVerificationToken.update({
-        where: { id: record.id },
-        data: { consumedAt: new Date() },
-      }),
-      this.prisma.user.update({
-        where: { id: record.userId },
-        data: { emailVerifiedAt: new Date() },
-      }),
-    ]);
+    await this.consumeVerification(record.id, record.userId);
+  }
+
+  /**
+   * Code path: verify with the 6-digit code from the email instead of the
+   * link. Same record, same expiry, same semantics.
+   */
+  async verifyEmailByCode(email: string, code: string): Promise<void> {
+    const record = await this.findActiveTokenByEmail(email, code, "verification");
+    if (!record) {
+      throw ApiError.badRequest("That code is not valid or has expired", "INVALID_CODE");
+    }
+    await this.consumeVerification(record.id, record.userId);
   }
 
   async forgotPassword(email: string): Promise<void> {
@@ -177,19 +181,17 @@ export class AuthService implements OnModuleInit {
     // Always succeed silently — no account enumeration (§40).
     if (!user) return;
     const raw = generateToken();
+    const code = generateCode();
     await this.prisma.passwordResetToken.create({
       data: {
         userId: user.id,
         tokenHash: hashToken(raw),
+        codeHash: hashToken(code),
         expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
       },
     });
     const url = `${primaryWebAppUrl()}/reset-password?token=${raw}`;
-    await this.mailer.send({
-      to: user.email,
-      subject: "Reset your TravelGhana password",
-      text: `Hi${user.name ? ` ${user.name}` : ""},\n\nReset your password: ${url}\n\nThis link expires in 1 hour. If you didn't request this, you can ignore this email.`,
-    });
+    await this.mailer.send({ to: user.email, ...resetEmail({ name: user.name, code, url }) });
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
@@ -199,18 +201,16 @@ export class AuthService implements OnModuleInit {
     if (!record || record.consumedAt || record.expiresAt < new Date()) {
       throw ApiError.badRequest("Invalid or expired reset link", "INVALID_TOKEN");
     }
-    await this.prisma.$transaction([
-      this.prisma.passwordResetToken.update({
-        where: { id: record.id },
-        data: { consumedAt: new Date() },
-      }),
-      this.prisma.user.update({
-        where: { id: record.userId },
-        data: { passwordHash: await hashPassword(newPassword) },
-      }),
-      // Force re-login everywhere after a reset (§40 session security).
-      this.prisma.session.deleteMany({ where: { userId: record.userId } }),
-    ]);
+    await this.consumeReset(record.id, record.userId, newPassword);
+  }
+
+  /** Code path: same reset, typed from the email instead of the link. */
+  async resetPasswordByCode(email: string, code: string, newPassword: string): Promise<void> {
+    const record = await this.findActiveTokenByEmail(email, code, "reset");
+    if (!record) {
+      throw ApiError.badRequest("That code is not valid or has expired", "INVALID_CODE");
+    }
+    await this.consumeReset(record.id, record.userId, newPassword);
   }
 
   async updateProfile(userId: string, input: { name?: string; phone?: string }): Promise<SessionUser> {
@@ -260,18 +260,80 @@ export class AuthService implements OnModuleInit {
 
   private async sendVerificationEmail(user: User): Promise<void> {
     const raw = generateToken();
+    const code = generateCode();
     await this.prisma.emailVerificationToken.create({
       data: {
         userId: user.id,
         tokenHash: hashToken(raw),
+        codeHash: hashToken(code),
         expiresAt: new Date(Date.now() + TOKEN_TTL_MS),
       },
     });
     const url = `${primaryWebAppUrl()}/verify-email?token=${raw}`;
-    await this.mailer.send({
-      to: user.email,
-      subject: "Verify your TravelGhana email",
-      text: `Welcome to TravelGhana!\n\nVerify your email: ${url}\n\nThis link expires in 1 hour.`,
+    await this.mailer.send({ to: user.email, ...verificationEmail({ name: user.name, code, url }) });
+  }
+
+  /** Consume a verification token and mark the user verified (shared path). */
+  private async consumeVerification(tokenId: string, userId: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.emailVerificationToken.update({
+        where: { id: tokenId },
+        data: { consumedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { emailVerifiedAt: new Date() },
+      }),
+    ]);
+  }
+
+  /** Consume a reset token, set the password, kill all sessions (shared). */
+  private async consumeReset(tokenId: string, userId: string, newPassword: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.update({
+        where: { id: tokenId },
+        data: { consumedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { passwordHash: await hashPassword(newPassword) },
+      }),
+      // Force re-login everywhere after a reset (§40 session security).
+      this.prisma.session.deleteMany({ where: { userId } }),
+    ]);
+  }
+
+  /**
+   * Resolve an active lifecycle token record by the user's email plus the
+   * numeric code baked into their email. Unknown emails get the same lookup
+   * (against a sentinel that matches nothing) so the response shape and work
+   * stay constant — no enumeration signal. Codes carry one hour of life, the
+   * same window as their link twin.
+   */
+  private async findActiveTokenByEmail(
+    email: string,
+    code: string,
+    kind: "verification" | "reset",
+  ): Promise<{ id: string; userId: string } | null> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    const codeHash = hashToken(code);
+    if (kind === "verification") {
+      return this.prisma.emailVerificationToken.findFirst({
+        where: {
+          userId: user?.id ?? "sentinel-none",
+          codeHash,
+          consumedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      });
+    }
+    return this.prisma.passwordResetToken.findFirst({
+      where: {
+        userId: user?.id ?? "sentinel-none",
+        codeHash,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+      },
     });
   }
 

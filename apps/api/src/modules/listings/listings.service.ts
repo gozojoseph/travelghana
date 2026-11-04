@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { City, Listing, Provider, Region } from "@travelghana/database";
+import type { City, Provider, Region } from "@travelghana/database";
 import { ListingStatus } from "@travelghana/database";
+
+import { ApiError } from "../../common/errors/api-error";
 import {
   type ListingCreateInput,
   type ListingStatusInput,
@@ -50,7 +52,7 @@ export type ListingRow = {
   title: string;
   status: ListingStatus;
   providerId: string;
-  provider: { name: string };
+  provider: { name: string; userId?: string | null };
   cityId: string | null;
   regionId: string | null;
   description: string | null;
@@ -156,7 +158,7 @@ export class ListingService {
     }
 
     const cityIds = [...new Set(items.map((i) => i.cityId))].filter(
-      (id): id is string => id !== "__none__",
+      (id): id is string => id !== null && id !== "__none__",
     );
     if (cityIds.length > 0) {
       const cities = await this.prisma.city.findMany({
@@ -167,7 +169,7 @@ export class ListingService {
     }
 
     const regionIds = [...new Set(items.map((i) => i.regionId))].filter(
-      (id): id is string => id !== "__none__",
+      (id): id is string => id !== null && id !== "__none__",
     );
     if (regionIds.length > 0) {
       const regions = await this.prisma.region.findMany({
@@ -404,7 +406,8 @@ export class ListingService {
   }
 
   async deleteListing(userId: string, listingId: string): Promise<void> {
-    const provider = await this.ownProvider(userId);
+    // ownProvider guards the 404 for accounts without a provider profile.
+    await this.ownProvider(userId);
     const listing = await this.getMyListing(userId, listingId);
     await this.prisma.listing.delete({ where: { id: listing.id } });
   }
@@ -420,7 +423,8 @@ export class ListingService {
     // for the Prisma update layer. Runtime values always match ListingStatus.
     const requested = status as ListingStatus;
     const adminStatus = status as ListingStatus;
-    const provider = await this.ownProvider(userId);
+    // ownProvider guards the 404 for accounts without a provider profile.
+    await this.ownProvider(userId);
     const listing = await this.getMyListing(userId, listingId);
 
     // A provider can only move a DRAFT into review. Every other transition is
@@ -580,7 +584,7 @@ export class ListingService {
     }
 
     const cityIds = [...new Set(items.map((i) => i.cityId))].filter(
-      (id): id is string => id !== "__none__",
+      (id): id is string => id !== null && id !== "__none__",
     );
     if (cityIds.length > 0) {
       const cities = await this.prisma.city.findMany({
@@ -591,7 +595,7 @@ export class ListingService {
     }
 
     const regionIds = [...new Set(items.map((i) => i.regionId))].filter(
-      (id): id is string => id !== "__none__",
+      (id): id is string => id !== null && id !== "__none__",
     );
     if (regionIds.length > 0) {
       const regions = await this.prisma.region.findMany({
@@ -604,17 +608,24 @@ export class ListingService {
     return items.map((item) =>
       this.toSummaryWithResolvedLocations(
         item,
-        null,
-        null,
+        cityById.get(item.cityId ?? "__none__") ?? null,
+        regionById.get(item.regionId ?? "__none__") ?? null,
       ),
     );
   }
 
-  async reviewListing(listingId: string, action: ReviewActionInput): Promise<ListingSummaryDto> {
-    const listing: ListingRow | null = await this.prisma.listing.findUnique({ where: { id: listingId }, select: { id: true, slug: true, title: true, status: true, providerId: true, provider: { select: { name: true } }, cityId: true, regionId: true, description: true, serviceArea: true, durationMinutes: true, capacity: true, priceMinor: true, currencyCode: true, coordinatesLat: true, coordinatesLng: true, address: true, meetingPoint: true, category: true, whatIsIncluded: true, whatIsExcluded: true, requirements: true, cancellationPolicy: true, heroImageUrl: true, publishedAt: true, updatedAt: true, createdAt: true } });
-    if (!listing) throw new NotFoundException("Listing not found");
+  async reviewListing(
+    listingId: string,
+    action: ReviewActionInput,
+    adminId: string,
+  ): Promise<ListingSummaryDto> {
+    const listing: ListingRow | null = await this.prisma.listing.findUnique({ where: { id: listingId }, select: { id: true, slug: true, title: true, status: true, providerId: true, provider: { select: { name: true, userId: true } }, cityId: true, regionId: true, description: true, serviceArea: true, durationMinutes: true, capacity: true, priceMinor: true, currencyCode: true, coordinatesLat: true, coordinatesLng: true, address: true, meetingPoint: true, category: true, whatIsIncluded: true, whatIsExcluded: true, requirements: true, cancellationPolicy: true, heroImageUrl: true, publishedAt: true, updatedAt: true, createdAt: true } });
+    if (!listing) throw ApiError.notFound("Listing not found", "LISTING_NOT_FOUND");
     if (listing.status !== ListingStatus.PENDING_REVIEW) {
-      throw new Error("Only a PENDING_REVIEW listing can be reviewed.");
+      throw ApiError.conflict(
+        "Only a PENDING_REVIEW listing can be reviewed",
+        "INVALID_STATE",
+      );
     }
 
     let status: ListingStatus;
@@ -641,7 +652,7 @@ export class ListingService {
         title: true,
         status: true,
         providerId: true,
-        provider: { select: { name: true } },
+        provider: { select: { name: true, userId: true } },
         cityId: true,
         regionId: true,
         description: true,
@@ -665,6 +676,41 @@ export class ListingService {
         createdAt: true,
       },
     });
+
+    // The decision is an admin action: audit trail + a queued notification
+    // for the provider's owning account (when one exists). Guests skip the
+    // notification — no account to attach it to.
+    await this.prisma.auditLog.create({
+      data: {
+        actorUserId: adminId,
+        action: "LISTING_REVIEWED",
+        entityType: "Listing",
+        entityId: listing.id,
+        meta: {
+          listingTitle: listing.title,
+          providerName: listing.provider.name,
+          decision: action.reviewStatus,
+          to: adminStatus,
+          ...(action.note ? { note: action.note } : {}),
+        },
+      },
+    });
+    if (listing.provider.userId) {
+      await this.prisma.notification.create({
+        data: {
+          userId: listing.provider.userId,
+          channel: "EMAIL",
+          type: "LISTING_REVIEW_DECISION",
+          payload: {
+            listingId: listing.id,
+            title: listing.title,
+            decision: action.reviewStatus,
+            ...(action.note ? { note: action.note } : {}),
+          },
+          status: "QUEUED",
+        },
+      });
+    }
 
     return this.toSummaryWithResolvedLocations(
       updated,

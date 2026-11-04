@@ -11,8 +11,13 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Prisma CLI (migrate/push/studio) and one-off connections use the direct
+  // URL; on Neon this is the non-pooler host because transaction-mode pooling
+  // (pgbouncer) breaks prepared statements. The generated Client itself still
+  // connects through `url` (pooled in production; same host locally).
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // ─── Identity ────────────────────────────────────────────────────────────────
@@ -56,6 +61,7 @@ model User {
   driverProfile Driver?     // 1:1
   trips         Trip[]      @relation("TripOwner")
   bookings      Booking[]
+  packageBookings PackageBooking[]
   reviews       Review[]
   favorites     Favorite[]
   messages      Message[]
@@ -66,6 +72,9 @@ model User {
   enquiries     Enquiry[]
   emailTokens   EmailVerificationToken[]
   passwordResetTokens PasswordResetToken[]
+  pageViews     PageView[]
+  packageReviews PackageReview[]
+  listingBookings ListingBooking[]
 }
 
 model RoleMembership {
@@ -98,6 +107,7 @@ model EmailVerificationToken {
   id        String   @id @default(cuid())
   userId    String
   tokenHash String   @unique
+  codeHash  String?
   expiresAt DateTime
   consumedAt DateTime?
   createdAt DateTime @default(now())
@@ -111,6 +121,7 @@ model PasswordResetToken {
   id         String    @id @default(cuid())
   userId     String
   tokenHash  String    @unique
+  codeHash   String?
   expiresAt  DateTime
   consumedAt DateTime?
   createdAt  DateTime  @default(now())
@@ -184,20 +195,22 @@ model Destination {
   city           City            @relation(fields: [cityId], references: [id])
   attractions    Attraction[]
   itineraryItems ItineraryItem[]
+  packages       Package[]
 
   @@index([category, published])
 }
 
 model Attraction {
-  id            String  @id @default(cuid())
+  id            String   @id @default(cuid())
   destinationId String?
   cityId        String?
-  slug          String  @unique
+  slug          String   @unique
   name          String
   description   String?
   lat           Float
   lng           Float
   category      String?
+  published     Boolean  @default(true)
 
   destination    Destination?    @relation(fields: [destinationId], references: [id])
   city           City?           @relation(fields: [cityId], references: [id])
@@ -241,8 +254,8 @@ model Location {
   address            String?
   lat                Float?
   lng                Float?
-  cityId             String? @db.Uuid
-  regionId           String? @db.Uuid
+  cityId             String?
+  regionId           String?
   country            String   @default("Ghana")
   postalCode         String?
   createdAt          DateTime @default(now())
@@ -264,7 +277,7 @@ model Provider {
   contactEmail       String?
   contactPhone       String?
   logoUrl            String?
-  cityId             String? @db.Uuid
+  cityId             String?
   serviceArea        String?
   coordinatesLat     Float?
   coordinatesLng     Float?
@@ -318,6 +331,7 @@ model Tour {
   city     City?             @relation(fields: [cityId], references: [id])
   slots    AvailabilitySlot[]
   bookings Booking[]
+  itineraryItems ItineraryItem[]
 
   @@unique([providerId, slug])
   @@index([cityId, published])
@@ -343,6 +357,7 @@ model Experience {
   city      City?             @relation(fields: [cityId], references: [id])
   slots     AvailabilitySlot[]
   bookings  Booking[]
+  itineraryItems ItineraryItem[]
 
   @@unique([providerId, slug])
   @@index([cityId, published])
@@ -362,8 +377,8 @@ model Listing {
   capacity           Int               @default(1)
   priceMinor         Int
   currencyCode       String            @default("GHS")
-  cityId             String? @db.Uuid
-  regionId           String? @db.Uuid
+  cityId             String?
+  regionId           String?
   coordinatesLat     Float?
   coordinatesLng     Float?
   address            String?
@@ -379,7 +394,8 @@ model Listing {
   updatedAt          DateTime          @updatedAt
 
   provider Provider    @relation(fields: [providerId], references: [id])
-  extension  ListingExtension?
+  extension ListingExtension?
+  requests ListingBooking[]
 
   @@unique([providerId, slug])
   @@index([providerId, status, cityId])
@@ -395,6 +411,91 @@ model ListingExtension {
   updatedAt       DateTime @default(now())
 
   listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+// ─── Curated packages (admin-managed, platform-owned) ───────────────────────
+
+/** Lifecycle for admin-curated packages: not provider inventory, so no review queue. */
+enum PackageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/**
+ * A multi-day travel package curated by TravelGhana admins. The day-by-day
+ * outline is editorial content (not bookable inventory yet) and is replaced as
+ * a set on update.
+ */
+model Package {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  title          String
+  summary        String?
+  description    String?
+  destinationId  String?
+  durationDays   Int
+  durationNights Int           @default(0)
+  priceMinor     Int
+  currencyCode   String        @default("GHS")
+  heroImageUrl   String?
+  inclusions     String?
+  exclusions     String?
+  status         PackageStatus @default(DRAFT)
+  featured       Boolean       @default(false)
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  destination Destination?  @relation(fields: [destinationId], references: [id], onDelete: SetNull)
+  days        PackageDay[]
+  itineraryItems ItineraryItem[]
+  packageBookings PackageBooking[]
+  departures      PackageDeparture[]
+  packageReviews  PackageReview[]
+
+  @@index([status, featured])
+  @@index([destinationId])
+}
+
+/** One editorial day in a package outline; unique per package. */
+model PackageDay {
+  id            String   @id @default(cuid())
+  packageId     String
+  dayNumber     Int
+  title         String
+  description   String?
+  meals         String?
+  accommodation String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  package Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, dayNumber])
+  @@index([packageId])
+}
+
+// ─── Gallery (admin-managed, platform-owned) ────────────────────────────────
+
+/**
+ * One editorial image in the public gallery. Images are referenced by URL for
+ * now (no upload/storage pipeline yet); admins curate the caption, grouping and
+ * order. Draft items stay invisible until published.
+ */
+model GalleryItem {
+  id        String   @id @default(cuid())
+  title     String
+  caption   String?
+  imageUrl  String
+  category  String?
+  location  String?
+  sortOrder Int      @default(0)
+  published Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([published, sortOrder])
 }
 
 model Hotel {
@@ -559,10 +660,10 @@ model TransportService {
   providerId     String
   serviceType    TransportServiceType
   vehicleCategory VehicleCategory?
+  cityId         String?
   basePriceMinor Int
   currencyCode   String               @default("GHS")
   pricingModel   PricingModel         @default(FLAT)
-  cityId         String?
   published      Boolean              @default(false)
   rules          Json?
   createdAt      DateTime             @default(now())
@@ -586,6 +687,41 @@ enum TripStatus {
   CANCELLED
 }
 
+/** Travel pace preference captured by the planner wizard. */
+enum TravelPace {
+  RELAXED
+  BALANCED
+  PACKED
+}
+
+/** Budget tier preference captured by the planner wizard. */
+enum BudgetTier {
+  BUDGET
+  MIDRANGE
+  PREMIUM
+  FLEXIBLE
+}
+
+/** Whether the stated budget covers one traveler or the whole group. */
+enum BudgetType {
+  PER_PERSON
+  PER_GROUP
+}
+
+/** Planner interests — recommendation signal captured by the wizard. */
+enum TripInterest {
+  CULTURE_HERITAGE
+  BEACHES_COASTAL
+  NATURE_WILDLIFE
+  ADVENTURE_HIKING
+  FOOD_CUISINE
+  FESTIVALS_EVENTS
+  ART_CRAFTS_SHOPPING
+  NIGHTLIFE_ENTERTAINMENT
+  RELAXATION_WELLNESS
+  FAMILY_FRIENDLY
+}
+
 model Trip {
   id           String     @id @default(cuid())
   ownerUserId  String
@@ -598,17 +734,52 @@ model Trip {
   budgetMinor  Int?
   currencyCode String     @default("GHS")
   notes        String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
 
-  owner         User            @relation("TripOwner", fields: [ownerUserId], references: [id])
+  // Planner preferences (D18 wizard). Arrays/bools default empty so existing
+  // rows and API-created trips stay valid without a wizard pass.
+  interests              TripInterest[] @default([])
+  travelPace             TravelPace     @default(BALANCED)
+  budgetTier             BudgetTier     @default(FLEXIBLE)
+  budgetType             BudgetType     @default(PER_GROUP)
+  budgetIncludesFlights  Boolean        @default(false)
+  arrivalPoint           String?
+  destinationPreferences String[]       @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner         User             @relation("TripOwner", fields: [ownerUserId], references: [id])
   travelers     TripTraveler[]
   days          ItineraryDay[]
+  items         ItineraryItem[]
   bookings      Booking[]
   conversations Conversation[]
   enquiries     Enquiry[]
+  shares        TripShare[]
 
   @@index([ownerUserId, status])
+}
+
+// ─── Trip sharing (D19: sanitized companion view, token-gated) ───────────────
+
+/**
+ * A token-gated read link for a trip. The token grants access to a sanitized,
+ * derived view of the plan (see trips.share.buildTripShareView) — never
+ * prices, notes, planner warnings, or traveler needs (§11). Creating a new
+ * share revokes the previous active one; revocation is a stamped timestamp so
+ * old tokens fail closed.
+ */
+model TripShare {
+  id        String    @id @default(cuid())
+  tripId    String
+  token     String    @unique
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, revokedAt])
+  @@index([tripId, createdAt])
 }
 
 model TripTraveler {
@@ -679,11 +850,35 @@ enum ItineraryItemType {
   EVENT
   NOTE
   TRANSPORT
+  ACCOMMODATION
+  TOUR
+  EXPERIENCE
 }
 
+/** How an itinerary estimate is charged (D18 — estimates, never confirmed prices). */
+enum PricingBasis {
+  PER_PERSON
+  PER_GROUP
+  PER_NIGHT
+  PER_SERVICE
+  TOTAL
+}
+
+/** Where an estimate came from: a listing snapshot or the traveler's own number. */
+enum EstimateSource {
+  LISTING
+  MANUAL
+}
+
+/**
+ * One activity/idea in a trip. Items may be scheduled on an ItineraryDay or
+ * sit in the trip-level "unscheduled ideas" list (itineraryDayId null). Cost
+ * fields are *estimates* — never treated as confirmed prices or bookings.
+ */
 model ItineraryItem {
   id             String            @id @default(cuid())
-  itineraryDayId String
+  tripId         String
+  itineraryDayId String?
   sortOrder      Int
   startTime      DateTime?
   endTime        DateTime?
@@ -692,15 +887,29 @@ model ItineraryItem {
   bookingId      String?
   attractionId   String?
   destinationId  String?
-  notes          String?
-  createdAt      DateTime          @default(now())
+  tourId         String?
+  experienceId   String?
+  packageId      String?
 
-  day         ItineraryDay @relation(fields: [itineraryDayId], references: [id], onDelete: Cascade)
+  estimatedCostMinor Int?
+  currencyCode       String?
+  pricingBasis       PricingBasis?
+  estimateSource     EstimateSource?
+  priceSnapshotAt    DateTime?
+
+  notes     String?
+  createdAt DateTime @default(now())
+
+  trip        Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  day         ItineraryDay? @relation(fields: [itineraryDayId], references: [id], onDelete: Cascade)
   booking     Booking?     @relation(fields: [bookingId], references: [id])
   attraction  Attraction?  @relation(fields: [attractionId], references: [id])
   destination Destination? @relation(fields: [destinationId], references: [id])
+  tour        Tour?        @relation(fields: [tourId], references: [id])
+  experience  Experience?  @relation(fields: [experienceId], references: [id])
+  package     Package?     @relation(fields: [packageId], references: [id])
 
-  @@index([itineraryDayId, sortOrder])
+  @@index([tripId, itineraryDayId, sortOrder])
 }
 
 // ─── Booking & availability ──────────────────────────────────────────────────
@@ -1123,4 +1332,163 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@index([actorUserId])
+}
+
+model SiteSettings {
+  /// Singleton row (fixed id) holding the public contact + social info shown in
+  /// the footer and the about page. Edited by admins at any time (D24); every
+  /// field is optional so the public surfaces hide what is not filled in.
+  /// D44: the two payment instruction blocks are not public surface - they are
+  /// merged into booking confirmation emails verbatim (no amounts are added by
+  /// the platform; the traveler pays manually by Mobile Money or bank).
+  id               String   @id @default("site")
+  phone            String?
+  whatsapp         String?
+  email            String?
+  address          String?
+  facebookUrl      String?
+  instagramUrl     String?
+  twitterUrl       String?
+  youtubeUrl       String?
+  momoInstructions String?
+  bankInstructions String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([updatedAt])
+}
+
+/// A booking request for one curated package (D25). Packages are platform-owned
+/// editorial journeys without provider inventory, so this stays a lean request
+/// row: the traveler books, no payment is taken until a human confirms
+/// availability (the Payment rails apply to the provider-scoped Booking model).
+model PackageBooking {
+  id        String        @id @default(cuid())
+  code      String        @unique // human-readable reference, e.g. PB-4K9A2C
+  userId    String
+  packageId String
+  startDate DateTime
+  adults    Int           @default(1)
+  children  Int           @default(0)
+  notes     String?
+  // Manual payments (D44): the date the team marked a confirmed booking as
+  // paid (bank transfer or Mobile Money reference). Null until then.
+  paidAt    DateTime?
+  status    BookingStatus @default(PENDING_PAYMENT)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id])
+  package Package @relation(fields: [packageId], references: [id])
+
+  // Departures (D41): set-date journeys carry a booked departure. Nullable so
+  // open-dated packages and legacy requests stay valid without one.
+  departureId String?
+
+  departure PackageDeparture? @relation(fields: [departureId], references: [id], onDelete: SetNull)
+  review    PackageReview?
+
+  @@index([userId, status])
+  @@index([packageId, status])
+  @@index([departureId])
+}
+
+/// Seat-managed departure date (D41/D42): an admin adds explicit dates with a
+/// seat count; travelers pick from future dates with remaining seats. A
+/// booking holds seats until it is cancelled/refunded/expired; remaining seats
+/// are derived (seats minus party size of live bookings), never decremented.
+model PackageDeparture {
+  id        String   @id @default(cuid())
+  packageId String
+  date      DateTime @db.Date
+  seats     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  package  Package         @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  bookings PackageBooking[]
+
+  @@unique([packageId, date])
+}
+
+/// Package reviews (D42) - the only reviewable surface in Phase 2, packages
+/// only. A traveler may review once a booking that the admin CONFIRMED exists
+/// (a booked trip, not just an account), the row starts PENDING and turns
+/// visible only after an admin approves it; a rejection keeps its reason.
+model PackageReview {
+  id           String   @id @default(cuid())
+  bookingId    String   @unique
+  packageId    String
+  userId       String
+  rating       Int
+  body         String?
+  status       String   @default("PENDING")
+  decisionNote String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  booking PackageBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  package Package        @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  author  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([packageId, status])
+  @@index([userId, status])
+}
+
+/// Quote-only transport request (D43): a signed-in traveler asks about one
+/// published listing owned by a transport provider (transport company or
+/// driver partner). There are no prices, no seats and no payment here - the
+/// team replies with a written quote by email and confirms or cancels; "paid"
+/// is off-platform and stays out of the data model.
+model ListingBooking {
+  id        String   @id @default(cuid())
+  code      String   @unique // human-readable reference, e.g. TB-4K9A2C
+  userId    String
+  listingId String
+  startDate DateTime
+  partySize Int      @default(1)
+  notes     String?
+  // PENDING (default) -> CONFIRMED | CANCELLED by admin decision. Plain string
+  // (like PackageReview.status) because the package payment-rail statuses do
+  // not apply to a quote conversation.
+  status    String   @default("PENDING")
+  // The latest written quote from the team, kept so the traveler can re-read
+  // it on their account page and not just in their mailbox.
+  quoteNote String?
+  quoteAt   DateTime?
+  decidedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id])
+
+  @@index([userId, status])
+  @@index([listingId])
+  @@index([status, createdAt])
+}
+
+/// First-party clickstream event (D37): one row per browsed page or tracked
+/// action. Written by POST /api/track from the web browser; never stores
+/// query strings, emails or free user content. Sessions are 30-minute
+/// browser buckets maintained client-side; userId correlates signed-in use.
+model PageView {
+  id         String    @id @default(cuid())
+  sessionId  String
+  visitorId  String
+  userId     String?
+  path       String
+  referrer   String?
+  device     String
+  kind       String
+  name       String?
+  meta       Json?
+  occurredAt DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([sessionId, occurredAt])
+  @@index([visitorId])
+  @@index([path])
+  @@index([userId])
 }

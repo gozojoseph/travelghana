@@ -5,6 +5,7 @@ import { Test } from "@nestjs/testing";
 import cookieParser from "cookie-parser";
 
 import { AppModule } from "../src/app.module";
+import { PrismaService } from "../src/common/prisma.service";
 import { MAILER, type Mailer } from "../src/modules/auth/mailer";
 
 /**
@@ -14,6 +15,7 @@ import { MAILER, type Mailer } from "../src/modules/auth/mailer";
 const OPERATOR = { name: "Esi Catalog", email: "int-catalog@example.com", password: "correct-horse-battery" };
 
 let app: NestExpressApplication;
+let prisma: PrismaService;
 
 beforeAll(async () => {
   const testMailer: Mailer = { async send() {} };
@@ -27,6 +29,8 @@ beforeAll(async () => {
   app.use(cookieParser());
   app.setGlobalPrefix("api"); // mirror main.ts
   await app.init();
+
+  prisma = moduleRef.get(PrismaService);
 });
 
 afterAll(async () => {
@@ -66,10 +70,41 @@ describe("public catalog", () => {
       .set("Cookie", cookie)
       .send({ title: "Drumming Circle", priceMinor: 15000, published: true })
       .expect(201);
+
+    // Attractions are public editorial data; seed one with place context.
+    const region = await prisma.region.create({
+      data: { slug: "int-catalog-region", name: "Catalog Region" },
+      select: { id: true },
+    });
+    const city = await prisma.city.create({
+      data: {
+        regionId: region.id,
+        slug: "int-catalog-city",
+        name: "Catalog City",
+        lat: 5.05,
+        lng: -1.1,
+      },
+      select: { id: true },
+    });
+    await prisma.attraction.create({
+      data: {
+        cityId: city.id,
+        slug: "int-catalog-estuary",
+        name: "Estuary Boardwalk",
+        description: "A quiet lagoon walk",
+        category: "NATURE",
+        lat: 5.05,
+        lng: -1.1,
+      },
+    });
   });
 
   it("lists published tours with provider context", async () => {
-    const res = await request(app.getHttpServer()).get("/api/catalog/tours").expect(200);
+    // Scoped by q so other integration files publishing tours into the shared
+    // test database cannot change this count (files run in parallel).
+    const res = await request(app.getHttpServer())
+      .get("/api/catalog/tours?q=Sunset")
+      .expect(200);
 
     expect(res.body.total).toBe(1);
     expect(res.body.items[0].title).toBe("Sunset Volta Cruise");
@@ -111,10 +146,29 @@ describe("public catalog", () => {
   });
 
   it("lists published experiences", async () => {
-    const res = await request(app.getHttpServer()).get("/api/catalog/experiences").expect(200);
+    const res = await request(app.getHttpServer())
+      .get("/api/catalog/experiences?q=Drumming")
+      .expect(200);
 
     expect(res.body.total).toBe(1);
     expect(res.body.items[0].title).toBe("Drumming Circle");
     expect(res.body.items[0].provider.slug).toBe(providerSlug);
+  });
+
+  it("lists public attractions with city and region context", async () => {
+    const res = await request(app.getHttpServer())
+      .get("/api/catalog/attractions?q=Estuary")
+      .expect(200);
+
+    expect(res.body.total).toBe(1);
+    expect(res.body.items[0]).toMatchObject({
+      name: "Estuary Boardwalk",
+      category: "NATURE",
+      city: {
+        slug: "int-catalog-city",
+        name: "Catalog City",
+        region: { slug: "int-catalog-region", name: "Catalog Region" },
+      },
+    });
   });
 });

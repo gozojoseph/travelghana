@@ -1,7 +1,9 @@
 /**
  * Seed: Ghana's 16 regions + key cities (real data, not placeholder).
- * Destinations/attractions/providers are entered via Admin (operator-first, D5)
- * — this seed only covers the static geographic backbone.
+ * Destinations/attractions are curated here with real coordinates (§51) and shipped with
+ * hero photos: every seeded destination must have an image at
+ * apps/web/public/destinations/<slug>.jpg (attribution in ATTRIBUTIONS.txt next to them).
+ * Providers/packages are entered via Admin (operator-first, D5).
  */
 import { PrismaClient, type DestinationCategory } from "../src/generated";
 
@@ -456,6 +458,7 @@ async function seedDestinations(): Promise<void> {
         lat: d.lat,
         lng: d.lng,
         featured: d.featured ?? false,
+        heroImageUrl: `/destinations/${d.slug}.jpg`,
         published: true,
       },
       create: {
@@ -468,6 +471,7 @@ async function seedDestinations(): Promise<void> {
         lat: d.lat,
         lng: d.lng,
         featured: d.featured ?? false,
+        heroImageUrl: `/destinations/${d.slug}.jpg`,
         published: true,
       },
     });

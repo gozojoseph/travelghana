@@ -23,6 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: `${destination.name} · TravelGhana`,
       description: destination.summary ?? undefined,
       type: "article",
+      images: destination.heroImageUrl ? [{ url: destination.heroImageUrl }] : undefined,
     },
   };
 }
@@ -66,6 +67,16 @@ export default async function DestinationDetailPage({ params }: Props) {
           {destination.city.name}, {destination.city.region.name}
         </span>
       </nav>
+
+      {destination.heroImageUrl && (
+        // Photo: /destinations/ATTRIBUTIONS.txt — computed list holds author + license.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={destination.heroImageUrl}
+          alt={`${destination.name}, ${destination.city.name}`}
+          className="animate-rise mt-6 aspect-[16/9] w-full rounded-card object-cover"
+        />
+      )}
 
       <header className="mt-4">
         <span className="rounded-full bg-muted px-3 py-0.5 text-xs font-medium text-muted-foreground">

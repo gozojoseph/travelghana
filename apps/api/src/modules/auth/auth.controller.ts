@@ -5,7 +5,9 @@ import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resetPasswordByCodeSchema,
   resetPasswordSchema,
+  verifyEmailByCodeSchema,
   verifyEmailSchema,
 } from "@travelghana/validation";
 
@@ -86,6 +88,19 @@ export class AuthController {
     return { message: "Email verified" };
   }
 
+  // Public for the same reason as the link above; the code comes from the
+  // same record, carries the same 1h expiry, and is throttled by the shared
+  // rate limiter. A wrong or missing code yields an identical INVALID_CODE.
+  @Public()
+  @Post("verify-email-code")
+  @HttpCode(HttpStatus.OK)
+  async verifyEmailByCode(
+    @Body(new ZodValidationPipe(verifyEmailByCodeSchema)) body: z.infer<typeof verifyEmailByCodeSchema>,
+  ): Promise<MessageResponse> {
+    await this.authService.verifyEmailByCode(body.email, body.code);
+    return { message: "Email verified" };
+  }
+
   @Post("resend-verification")
   @HttpCode(HttpStatus.OK)
   async resendVerification(@CurrentUser() user?: SessionUser): Promise<MessageResponse> {
@@ -111,6 +126,18 @@ export class AuthController {
     @Body(new ZodValidationPipe(resetPasswordSchema)) body: z.infer<typeof resetPasswordSchema>,
   ): Promise<MessageResponse> {
     await this.authService.resetPassword(body.token, body.password);
+    return { message: "Password updated — please log in" };
+  }
+
+  // Code twins of the link flows (D35): email + 6-digit code instead of the
+  // deep-linked token. Same record, same expiry, same session invalidation.
+  @Public()
+  @Post("reset-password-code")
+  @HttpCode(HttpStatus.OK)
+  async resetPasswordByCode(
+    @Body(new ZodValidationPipe(resetPasswordByCodeSchema)) body: z.infer<typeof resetPasswordByCodeSchema>,
+  ): Promise<MessageResponse> {
+    await this.authService.resetPasswordByCode(body.email, body.code, body.password);
     return { message: "Password updated — please log in" };
   }
 

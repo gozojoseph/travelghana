@@ -1,5 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { Role, ListingStatus } from "@travelghana/database";
+import { Role } from "@travelghana/database";
 import type { ListingStatusString, ListingSummaryDto } from "./listings.service";
 import {
   idParamSchema,
@@ -8,14 +8,13 @@ import {
   reviewActionSchema,
   statusTransitionSchema,
   listingStatusQuerySchema,
-  type ListingStatusQuery,
   type ListingStatusInput,
 } from "@travelghana/validation";
 import { z } from "zod";
 
 import { ApiError } from "../../common/errors/api-error";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { AnyRole, Roles } from "../../common/decorators/roles.decorator";
+import { AnyRole } from "../../common/decorators/roles.decorator";
 import { ZodValidationPipe } from "../../common/pipes/zod-validation.pipe";
 import { ListingService } from "./listings.service";
 
@@ -127,6 +126,6 @@ export class ListingController {
   ): Promise<{ listing: ListingSummaryDto }> {
     if (!user) throw ApiError.unauthorized();
     if (!body || body.reviewStatus === undefined) throw ApiError.badRequest("Missing review action");
-    return { listing: await this.service.reviewListing(params.id, body) };
+    return { listing: await this.service.reviewListing(params.id, body, user.id) };
   }
 }

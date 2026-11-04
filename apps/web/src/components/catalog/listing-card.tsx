@@ -31,10 +31,13 @@ export function ListingCard({ listing }: { listing: Listing }) {
   return (
     <Link
       href={href}
-      className="group flex flex-col overflow-hidden rounded-card border border-border bg-card transition-shadow hover:shadow-md focus-visible:outline-primary"
+      className="group flex flex-col overflow-hidden rounded-card border border-border bg-card transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-primary"
     >
       <div className="flex h-36 items-center justify-center bg-secondary/20">
-        <Icon aria-hidden className="h-10 w-10 text-secondary" />
+        <Icon
+          aria-hidden
+          className="h-10 w-10 text-secondary transition-transform duration-300 group-hover:scale-110"
+        />
       </div>
       <div className="flex flex-1 flex-col gap-1 p-4">
         {listing.category ? (
